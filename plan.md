@@ -24,21 +24,63 @@ A web-based educational game inspired by the classic "Guess Who" board game, but
 - "Does your word have a silent letter?"
 - "Does your word have a double letter?"
 
+### Game Rules & Behavior
+
+#### Grid Setup
+- **Both players see the same words in the same positions** on their game boards
+- The instructor selects which words from the word bank (up to 100 words) will appear in each game
+- Grid sizes: 12, 16, 20, or 24 cards depending on configuration
+
+#### Card Flipping
+- **Manual flipping only (MVP)**: Players tap/click cards to flip and eliminate words based on the answers they receive
+- Auto-evaluation (highlighting cards that match/don't match a question) is a **future enhancement**
+
+#### Turn Flow
+1. Player A asks a yes/no question about Player B's secret word
+2. Player B answers "yes" or "no"
+3. Player A manually flips cards to eliminate words
+4. Player A can optionally make a guess, or pass
+5. Turn switches to Player B
+
+#### Reconnection
+- **Players can rejoin** a game in progress if they disconnect
+- Game state is preserved and restored upon reconnection
+- Players rejoin using the same game code and player name
+
+#### Game Room Lifecycle
+All game rooms expire after **5 minutes** in these scenarios:
+- Room created but second player never joins
+- Game completed (room persists briefly for rematch option)
+- Both players disconnect
+
+#### Configuration Visibility
+- Game configurations are **public**: all instructors can view configurations created by other instructors
+- Instructors **cannot edit** other instructors' configurations
+- Instructors can **copy/duplicate** configurations to create their own versions
+
 ## Tech Stack
 
 | Component | Technology |
 |-----------|------------|
 | Runtime | [Bun](https://bun.sh) |
 | Language | JavaScript/TypeScript |
-| Frontend Framework | TBD (React, Vue, or Vanilla JS) |
+| Frontend Framework | React |
 | Backend/API | Bun's built-in HTTP server |
 | Real-time Communication | WebSockets (via Bun) |
-| Database | SQLite (via Bun's native SQLite support) or JSON file storage |
-| Styling | TBD |
+| Database | SQLite (via Bun's native SQLite support) |
+| Styling | Tailwind CSS |
 
 ## Art Style
 
-<!-- TODO: Define art style once determined -->
+**Theme**: Playful, kid-friendly with bright colors
+
+- Vibrant, engaging color palette suitable for young learners
+- Friendly, approachable visual design
+- Clear, readable typography for sight words
+- Fun animations for card flips and game events
+- Visual feedback that feels rewarding and encouraging
+
+*Note: Detailed art style specifications to be provided later.*
 
 ## Architecture
 
@@ -67,7 +109,7 @@ A web-based educational game inspired by the classic "Guess Who" board game, but
 │                              ▼                                   │
 │                    ┌─────────────────┐                          │
 │                    │  Storage Layer  │                          │
-│                    │  (SQLite/JSON)  │                          │
+│                    │    (SQLite)     │                          │
 │                    └─────────────────┘                          │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -82,30 +124,37 @@ word-guess-who/
 │   │   ├── game-engine.ts        # Core game logic
 │   │   ├── session-manager.ts    # WebSocket room management
 │   │   ├── config-manager.ts     # Load/save game configs
+│   │   ├── db.ts                 # SQLite database connection & queries
 │   │   └── routes/
 │   │       ├── api.ts            # REST API endpoints
 │   │       └── websocket.ts      # WebSocket handlers
 │   ├── client/
 │   │   ├── index.html            # Main HTML entry
-│   │   ├── styles/
-│   │   │   └── main.css
-│   │   ├── scripts/
-│   │   │   ├── app.ts            # Client entry point
-│   │   │   ├── game-board.ts     # Card grid rendering & interactions
-│   │   │   ├── websocket.ts      # WebSocket client
-│   │   │   └── ui/
-│   │   │       ├── card.ts       # Individual card component
-│   │   │       ├── question-panel.ts
-│   │   │       └── lobby.ts      # Game lobby UI
-│   │   └── instructor/
-│   │       ├── index.html        # Instructor dashboard
-│   │       └── config-editor.ts  # Config creation UI
+│   │   ├── App.tsx               # React root component
+│   │   ├── main.tsx              # React entry point
+│   │   ├── index.css             # Tailwind CSS entry
+│   │   ├── components/
+│   │   │   ├── GameBoard.tsx     # Card grid rendering & interactions
+│   │   │   ├── Card.tsx          # Individual word card component
+│   │   │   ├── QuestionPanel.tsx # Question asking/answering UI
+│   │   │   ├── Lobby.tsx         # Game lobby & room joining
+│   │   │   └── GameOver.tsx      # Win/lose screen
+│   │   ├── pages/
+│   │   │   ├── Home.tsx          # Landing page
+│   │   │   ├── Game.tsx          # Main game page
+│   │   │   └── Instructor.tsx    # Instructor dashboard
+│   │   ├── hooks/
+│   │   │   ├── useWebSocket.ts   # WebSocket connection hook
+│   │   │   └── useGameState.ts   # Game state management hook
+│   │   └── lib/
+│   │       └── websocket.ts      # WebSocket client utilities
 │   └── shared/
 │       ├── types.ts              # Shared TypeScript types
 │       └── validation.ts         # Config validation
 ├── configs/                      # Saved game configurations
 │   └── default.json              # Default word bank
-├── data/                         # Runtime data (sessions, etc.)
+├── data/                         # Runtime data
+│   └── word-guess-who.db         # SQLite database
 ├── public/                       # Static assets
 │   ├── images/
 │   └── sounds/
@@ -113,6 +162,8 @@ word-guess-who/
 ├── package.json
 ├── bunfig.toml
 ├── tsconfig.json
+├── tailwind.config.js
+├── postcss.config.js
 └── README.md
 ```
 
@@ -431,8 +482,9 @@ interface GameSettings {
 
 ### Enhanced Features (Post-MVP)
 
+- [ ] **Mobile/Tablet Support**: Responsive design for touch devices
+- [ ] **Auto-Evaluation**: Automatically highlight/flip cards based on question answers
 - [ ] **Question Suggestions**: Show relevant questions based on remaining words
-- [ ] **Auto-Evaluation**: Automatically answer questions based on word metadata
 - [ ] **Progress Tracking**: Track student performance over time
 - [ ] **Multiple Word Banks**: Switch between different grade levels/themes
 - [ ] **Spectator Mode**: Allow instructors to watch games
@@ -794,9 +846,23 @@ Configure on GitHub repository settings:
 1. Should the game support more than 2 players (team mode)?
 2. Should there be a solo practice mode against AI?
 3. How should game history/statistics be stored?
-4. Should configurations be shareable between instructors?
-5. Is there a need for user accounts/authentication?
+
+## Resolved Decisions
+
+| Decision | Resolution |
+|----------|------------|
+| Frontend Framework | React |
+| Styling | Tailwind CSS |
+| Database | SQLite |
+| Card Flipping | Manual (MVP), Auto-evaluation (future) |
+| Word Selection | Instructor chooses from word bank |
+| Grid Arrangement | Same words, same positions for both players |
+| Mobile Support | Future enhancement (not MVP) |
+| Reconnection | Players can rejoin with same game code |
+| Room Expiration | 5 minutes max in all scenarios |
+| Config Visibility | Public (view-only, no cross-editing) |
+| Art Style | Playful, kid-friendly with bright colors |
 
 ---
 
-*Last updated: 2025-01-27*
+*Last updated: 2026-01-27*
