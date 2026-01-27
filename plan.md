@@ -515,26 +515,279 @@ interface GameSettings {
 
 ### Hosting Options
 
-1. **Bun on a VPS** (DigitalOcean, Linode, etc.)
-   - Full control, cost-effective
-   - Requires server management
+| Option | Platform | Pros | Cons |
+|--------|----------|------|------|
+| **Container** | Fly.io | Easy deploy, global edge, WebSocket support, free tier | Paid for scaling |
+| **Container** | Railway | Git-based deploys, simple UI, good free tier | Limited customization |
+| **VPS** | DigitalOcean/Linode | Full control, cost-effective | Manual server management |
+| **PaaS** | Render | Native Bun support, auto-deploy from Git | Cold starts on free tier |
 
-2. **Container Deployment** (Fly.io, Railway)
-   - Easy deployment from Dockerfile
-   - Built-in scaling
+**Recommended**: **Fly.io** or **Railway** for simplicity with WebSocket support.
 
-3. **Serverless with Bun** (Limited support currently)
-   - May need adapter for platforms like Vercel
+### CI/CD Pipeline
+
+We'll use **GitHub Actions** for continuous integration and deployment.
+
+#### Pipeline Overview
+
+```
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│   Push/PR   │────▶│    Test     │────▶│    Build    │────▶│   Deploy    │
+│   to main   │     │  (lint,     │     │  (Docker    │     │  (Fly.io/   │
+│             │     │   typecheck,│     │   image)    │     │   Railway)  │
+│             │     │   unit)     │     │             │     │             │
+└─────────────┘     └─────────────┘     └─────────────┘     └─────────────┘
+```
+
+#### Workflow Files
+
+##### `.github/workflows/ci.yml` - Runs on all PRs
+
+```yaml
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Lint
+        run: bun run lint
+
+      - name: Type check
+        run: bun run typecheck
+
+      - name: Run tests
+        run: bun test
+
+  build:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build
+        run: bun run build
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build
+          path: dist/
+```
+
+##### `.github/workflows/deploy.yml` - Deploys on merge to main
+
+```yaml
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    # Only deploy if CI passes (implicitly via push trigger after merge)
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Run tests
+        run: bun test
+
+      - name: Build
+        run: bun run build
+
+      # Option A: Deploy to Fly.io
+      - name: Setup Fly.io CLI
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Deploy to Fly.io
+        run: flyctl deploy --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      # Option B: Deploy to Railway (alternative)
+      # - name: Deploy to Railway
+      #   uses: bervProject/railway-deploy@main
+      #   with:
+      #     railway_token: ${{ secrets.RAILWAY_TOKEN }}
+      #     service: word-guess-who
+```
+
+##### `.github/workflows/preview.yml` - Preview deployments for PRs (optional)
+
+```yaml
+name: Preview Deploy
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Fly.io CLI
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Deploy Preview
+        id: deploy
+        run: |
+          flyctl deploy --remote-only \
+            --app word-guess-who-pr-${{ github.event.number }} \
+            --config fly.preview.toml
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: Comment PR with preview URL
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '🚀 Preview deployed to: https://word-guess-who-pr-${{ github.event.number }}.fly.dev'
+            })
+```
+
+### Docker Configuration
+
+##### `Dockerfile`
+
+```dockerfile
+FROM oven/bun:1 AS base
+WORKDIR /app
+
+# Install dependencies
+FROM base AS deps
+COPY package.json bun.lockb ./
+RUN bun install --frozen-lockfile --production
+
+# Build the application
+FROM base AS builder
+COPY package.json bun.lockb ./
+RUN bun install --frozen-lockfile
+COPY . .
+RUN bun run build
+
+# Production image
+FROM base AS runner
+WORKDIR /app
+
+ENV NODE_ENV=production
+ENV PORT=3000
+
+# Copy built assets and production dependencies
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/configs ./configs
+
+EXPOSE 3000
+
+CMD ["bun", "run", "dist/server/index.js"]
+```
+
+##### `fly.toml` (Fly.io configuration)
+
+```toml
+app = "word-guess-who"
+primary_region = "iad"
+
+[build]
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  auto_stop_machines = true
+  auto_start_machines = true
+  min_machines_running = 0
+
+[env]
+  NODE_ENV = "production"
+
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory_mb = 512
+```
+
+### Package.json Scripts
+
+```json
+{
+  "scripts": {
+    "dev": "bun --watch src/server/index.ts",
+    "build": "bun build src/server/index.ts --outdir dist/server --target bun",
+    "start": "bun run dist/server/index.js",
+    "test": "bun test",
+    "lint": "eslint src/",
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write src/"
+  }
+}
+```
 
 ### Environment Variables
 
-```env
-PORT=3000
-NODE_ENV=production
-CONFIG_PATH=./configs
-DATA_PATH=./data
-SESSION_SECRET=your-secret-key
-```
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `PORT` | Server port (default: 3000) | No |
+| `NODE_ENV` | Environment (development/production) | No |
+| `CONFIG_PATH` | Path to game configs directory | No |
+| `DATA_PATH` | Path to runtime data directory | No |
+| `SESSION_SECRET` | Secret for session signing | Yes (prod) |
+
+### GitHub Secrets Required
+
+| Secret | Description |
+|--------|-------------|
+| `FLY_API_TOKEN` | Fly.io API token for deployments |
+| `RAILWAY_TOKEN` | Railway token (if using Railway) |
+
+### Branch Protection Rules
+
+Configure on GitHub repository settings:
+
+- **Require PR reviews** before merging to main
+- **Require status checks** to pass (CI workflow)
+- **Require branches to be up to date** before merging
+- **Do not allow bypassing** the above settings
 
 ## Open Questions
 
