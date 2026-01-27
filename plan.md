@@ -482,6 +482,9 @@ interface GameSettings {
 
 ### Enhanced Features (Post-MVP)
 
+- [ ] **Team Mode**: Support more than 2 players in team-based gameplay
+- [ ] **Solo Practice Mode**: Practice against AI opponent
+- [ ] **Game Statistics & History**: Track player performance, game outcomes, and word analytics
 - [ ] **Mobile/Tablet Support**: Responsive design for touch devices
 - [ ] **Auto-Evaluation**: Automatically highlight/flip cards based on question answers
 - [ ] **Question Suggestions**: Show relevant questions based on remaining words
@@ -841,12 +844,6 @@ Configure on GitHub repository settings:
 - **Require branches to be up to date** before merging
 - **Do not allow bypassing** the above settings
 
-## Open Questions
-
-1. Should the game support more than 2 players (team mode)?
-2. Should there be a solo practice mode against AI?
-3. How should game history/statistics be stored?
-
 ## Resolved Decisions
 
 | Decision | Resolution |
@@ -862,6 +859,9 @@ Configure on GitHub repository settings:
 | Room Expiration | 5 minutes max in all scenarios |
 | Config Visibility | Public (view-only, no cross-editing) |
 | Art Style | Playful, kid-friendly with bright colors |
+| Player Count | 2 players (MVP), Team mode (future) |
+| Solo Practice | Future enhancement (AI opponent) |
+| Game Statistics | Future enhancement (post-MVP) |
 
 ---
 
