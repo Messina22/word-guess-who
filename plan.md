@@ -72,15 +72,86 @@ All game rooms expire after **5 minutes** in these scenarios:
 
 ## Art Style
 
-**Theme**: Playful, kid-friendly with bright colors
+**Theme**: Elementary School Bulletin Board / Crayon Box
 
-- Vibrant, engaging color palette suitable for young learners
-- Friendly, approachable visual design
-- Clear, readable typography for sight words
-- Fun animations for card flips and game events
-- Visual feedback that feels rewarding and encouraging
+The game feels like a classroom bulletin board come to life—everything looks hand-crafted with construction paper, crayons, scissors, and tape. The aesthetic evokes the warmth and creativity of an elementary school classroom.
 
-*Note: Detailed art style specifications to be provided later.*
+### Color Palette
+
+| Color | Hex | Usage |
+|-------|-----|-------|
+| **Construction Paper Red** | `#E63946` | Primary accent, important buttons |
+| **Crayon Blue** | `#457B9D` | Secondary accent, links |
+| **Sunshine Yellow** | `#FFD166` | Highlights, success states |
+| **Grass Green** | `#2A9D8F` | Correct/positive feedback |
+| **Grape Purple** | `#7B2CBF` | Player 2 accent |
+| **Tangerine Orange** | `#F77F00` | Warnings, turn indicators |
+| **Kraft Paper Brown** | `#C9B99A` | Card backgrounds, neutral elements |
+| **Cork Board Tan** | `#D4A574` | Main background texture |
+| **Lined Paper White** | `#FFFEF9` | Text areas, input fields |
+| **Pencil Gray** | `#5C5C5C` | Text, borders |
+| **Chalkboard Green** | `#2E5339` | Optional header/footer areas |
+
+### Visual Elements
+
+| Element | School Supply Inspiration |
+|---------|---------------------------|
+| **Word Cards** | Construction paper rectangles with slightly uneven "scissor-cut" edges |
+| **Card Backs** | Kraft paper with crayon scribble pattern |
+| **Buttons** | Rounded rectangles that look like erasers or sticky notes |
+| **Borders** | Dashed lines like scissors cutting guides, or wavy crayon strokes |
+| **Backgrounds** | Cork bulletin board texture with subtle push-pin holes |
+| **Dividers** | Strips of washi tape or masking tape |
+| **Icons** | Hand-drawn style (wobbly lines, imperfect shapes) |
+| **Decorations** | Gold star stickers, smiley faces, "Good Job!" stamps |
+| **Flipped Cards** | Look "pinned" to the board with a colored push-pin |
+
+### Typography
+
+| Use | Font Suggestion | Style |
+|-----|-----------------|-------|
+| **Sight Words** | **Andika** or **Lexend** | Clear, dyslexia-friendly, easy for early readers |
+| **Headings** | **Patrick Hand** or **Caveat** | Looks like neat teacher handwriting |
+| **UI Labels** | **Nunito** or **Quicksand** | Rounded, friendly, readable |
+| **Fun Accents** | **Gaegu** or **Just Another Hand** | Crayon/marker feel for decorative text |
+
+### Textures & Effects
+
+- **Paper grain overlay** on cards and backgrounds
+- **Subtle drop shadows** that look like paper is slightly lifted
+- **Crayon stroke borders** (slightly transparent, uneven edges)
+- **Tape pieces** in corners holding elements "in place"
+- **Pencil smudge** subtle texture on interactive elements
+- **Sticker shine** effect on achievement badges
+
+### Card States
+
+| State | Visual Treatment |
+|-------|------------------|
+| **Active (face-up)** | Bright construction paper, word clearly visible, slight "popped up" shadow |
+| **Flipped (eliminated)** | Faded/grayed, rotated slightly, looks "pushed down" into the board |
+| **Hover** | Gentle wobble, paper lifting effect |
+| **Selected** | Gold star sticker appears in corner |
+| **Opponent's secret word** | Special "mystery" treatment with a question mark stamp |
+
+### Animations
+
+| Action | Animation Style |
+|--------|-----------------|
+| **Card flip** | Paper folding effect, like turning a page |
+| **Correct guess** | Confetti of gold stars and smiley stickers |
+| **Wrong guess** | Gentle "eraser shake" wobble |
+| **Turn change** | Washi tape "slides" to indicate active player |
+| **Win celebration** | "A+" stamp animation, stickers flying |
+
+### Sound Design (Future Enhancement)
+
+| Action | Sound |
+|--------|-------|
+| Card flip | Paper rustling |
+| Button click | Stapler "chunk" |
+| Correct answer | Triangle ding (classroom instrument) |
+| Win | Children cheering / bell ringing |
 
 ## Architecture
 
