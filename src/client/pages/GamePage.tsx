@@ -4,6 +4,7 @@ import { useGameState } from "@client/hooks/useGameState";
 import { useGameActions } from "@client/hooks/useGameActions";
 import { GameBoard } from "@client/components/game/GameBoard";
 import { QuestionPanel } from "@client/components/game/QuestionPanel";
+import { QuestionLog } from "@client/components/game/QuestionLog";
 import { TurnIndicator } from "@client/components/game/TurnIndicator";
 import { GameOverOverlay } from "@client/components/game/GameOverOverlay";
 import { WaitingRoom } from "@client/components/lobby/WaitingRoom";
@@ -152,8 +153,9 @@ export function GamePage() {
           <div className="lg:col-span-2">
             <GameBoard />
           </div>
-          <div>
+          <div className="space-y-4">
             <QuestionPanel />
+            <QuestionLog />
           </div>
         </div>
       </main>

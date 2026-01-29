@@ -19,7 +19,9 @@ export const WordCard = memo(function WordCard({
   disabled,
 }: WordCardProps) {
   const handleClick = () => {
-    if (!disabled && !isSecret) {
+    // Players can flip any card including their own secret word
+    // (useful when a question eliminates their secret word as a possibility)
+    if (!disabled) {
       onClick();
     }
   };
@@ -31,7 +33,7 @@ export const WordCard = memo(function WordCard({
     }
   };
 
-  const isClickable = !disabled && !isSecret;
+  const isClickable = !disabled;
 
   return (
     <div

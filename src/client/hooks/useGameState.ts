@@ -17,6 +17,7 @@ export function useGameState() {
     lastAnswer,
     error,
     revealedSecrets,
+    questionHistory,
   } = useGame();
 
   const isMyTurn = playerIndex !== null && currentTurn === playerIndex;
@@ -48,6 +49,7 @@ export function useGameState() {
     lastAnswer,
     error,
     revealedSecrets,
+    questionHistory,
     isMyTurn,
     isPlaying,
     isWaiting,

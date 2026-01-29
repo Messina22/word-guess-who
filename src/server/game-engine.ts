@@ -205,10 +205,8 @@ export function flipCard(
     return { success: false, error: "Invalid card index" };
   }
 
-  // Can't flip your own secret word
-  if (cardIndex === player.secretWordIndex) {
-    return { success: false, error: "Cannot flip your secret word" };
-  }
+  // Players CAN flip their own secret word - if a question eliminates it,
+  // they should be able to flip it to track the game state properly
 
   // Toggle flip state
   const flippedIndex = player.flippedCards.indexOf(cardIndex);
