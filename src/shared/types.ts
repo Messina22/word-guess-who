@@ -119,6 +119,8 @@ export interface GameSession {
   code: string;
   /** ID of the game configuration being used */
   configId: string;
+  /** Whether this is a local 2-player mode (questions asked in person) */
+  isLocalMode: boolean;
   /** Current phase of the game */
   phase: GamePhase;
   /** Players in the session (max 2) */
@@ -135,6 +137,8 @@ export interface GameSession {
 export interface PublicGameSession {
   code: string;
   configId: string;
+  /** Whether this is a local 2-player mode (questions asked in person) */
+  isLocalMode: boolean;
   phase: GamePhase;
   players: Array<{ id: string; name: string; connected: boolean }>;
   createdAt: string;
@@ -337,6 +341,8 @@ export type ServerMessage =
 /** Input for creating a new game session */
 export interface CreateGameInput {
   configId: string;
+  /** Enable local 2-player mode (questions asked in person) */
+  isLocalMode?: boolean;
 }
 
 /** Response when creating a game */

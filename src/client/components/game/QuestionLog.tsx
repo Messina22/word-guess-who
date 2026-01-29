@@ -6,6 +6,11 @@ export function QuestionLog() {
   const { questionHistory, playerIndex, session } = useGameState();
   const [isExpanded, setIsExpanded] = useState(true);
 
+  // Hide in local mode (questions asked in person, not tracked)
+  if (session?.isLocalMode) {
+    return null;
+  }
+
   if (questionHistory.length === 0) {
     return null;
   }
