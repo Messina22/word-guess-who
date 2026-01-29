@@ -4,6 +4,7 @@ import {
   useReducer,
   useEffect,
   useCallback,
+  useRef,
   type ReactNode,
 } from "react";
 import { wsClient } from "@client/lib/websocket";
@@ -58,7 +59,7 @@ const initialState: GameContextState = {
 
 function gameReducer(
   state: GameContextState,
-  action: GameAction
+  action: GameAction,
 ): GameContextState {
   switch (action.type) {
     case "CONNECTED":
@@ -123,7 +124,7 @@ function gameReducer(
             session: {
               ...state.session,
               players: state.session.players.map((p, i) =>
-                i === message.playerIndex ? { ...p, connected: false } : p
+                i === message.playerIndex ? { ...p, connected: false } : p,
               ),
             },
           };
@@ -135,7 +136,7 @@ function gameReducer(
             session: {
               ...state.session,
               players: state.session.players.map((p, i) =>
-                i === message.playerIndex ? { ...p, connected: true } : p
+                i === message.playerIndex ? { ...p, connected: true } : p,
               ),
             },
           };
@@ -179,8 +180,8 @@ function gameReducer(
             currentTurn: message.correct
               ? state.currentTurn
               : state.currentTurn === 0
-              ? 1
-              : 0,
+                ? 1
+                : 0,
           };
 
         case "game_over":
@@ -219,12 +220,15 @@ interface GameContextValue extends GameContextState {
   answerQuestion: (answer: boolean) => void;
   makeGuess: (word: string) => void;
   leaveGame: () => void;
+  /** Ref set when join_game is sent; used to avoid double-join (e.g. Strict Mode remount) */
+  joinedGameCodeRef: React.MutableRefObject<string | null>;
 }
 
 const GameContext = createContext<GameContextValue | null>(null);
 
 export function GameProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(gameReducer, initialState);
+  const joinedGameCodeRef = useRef<string | null>(null);
 
   useEffect(() => {
     wsClient.connect();
@@ -255,6 +259,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
   const joinGame = useCallback(
     (gameCode: string, playerName: string, playerId?: string) => {
+      joinedGameCodeRef.current = gameCode;
       send({
         type: "join_game",
         gameCode,
@@ -262,38 +267,39 @@ export function GameProvider({ children }: { children: ReactNode }) {
         playerId,
       });
     },
-    [send]
+    [send],
   );
 
   const flipCard = useCallback(
     (cardIndex: number) => {
       send({ type: "flip_card", cardIndex });
     },
-    [send]
+    [send],
   );
 
   const askQuestion = useCallback(
     (question: string) => {
       send({ type: "ask_question", question });
     },
-    [send]
+    [send],
   );
 
   const answerQuestion = useCallback(
     (answer: boolean) => {
       send({ type: "answer_question", answer });
     },
-    [send]
+    [send],
   );
 
   const makeGuess = useCallback(
     (word: string) => {
       send({ type: "make_guess", word });
     },
-    [send]
+    [send],
   );
 
   const leaveGame = useCallback(() => {
+    joinedGameCodeRef.current = null;
     send({ type: "leave_game" });
     dispatch({ type: "RESET" });
   }, [send]);
@@ -308,6 +314,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     answerQuestion,
     makeGuess,
     leaveGame,
+    joinedGameCodeRef,
   };
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;

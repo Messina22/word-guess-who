@@ -11,9 +11,9 @@ import { WaitingRoom } from "@client/components/lobby/WaitingRoom";
 export function GamePage() {
   const { code } = useParams<{ code: string }>();
   const navigate = useNavigate();
-  const { session, connected, error, isWaiting, isFinished } =
-    useGameState();
-  const { joinGame, leaveGame, clearError } = useGameActions();
+  const { session, connected, error, isWaiting, isFinished } = useGameState();
+  const { joinGame, leaveGame, clearError, joinedGameCodeRef } =
+    useGameActions();
   const [hasJoined, setHasJoined] = useState(false);
 
   useEffect(() => {
@@ -29,16 +29,21 @@ export function GamePage() {
     }
 
     if (connected && !hasJoined) {
+      // Avoid double-join when React Strict Mode remounts (ref survives remount)
+      if (joinedGameCodeRef.current === code) {
+        setHasJoined(true);
+        return;
+      }
       const savedPlayerId = localStorage.getItem(`playerId_${code}`);
       joinGame(code, playerName, savedPlayerId || undefined);
       setHasJoined(true);
     }
-  }, [code, connected, hasJoined, joinGame, navigate]);
+  }, [code, connected, hasJoined, joinGame, joinedGameCodeRef, navigate]);
 
   useEffect(() => {
     if (session && code) {
       const myPlayer = session.players.find(
-        (p) => p.name === localStorage.getItem("playerName")
+        (p) => p.name === localStorage.getItem("playerName"),
       );
       if (myPlayer) {
         localStorage.setItem(`playerId_${code}`, myPlayer.id);
@@ -65,7 +70,13 @@ export function GamePage() {
           <div className="text-4xl mb-4">😕</div>
           <h2 className="font-display text-2xl text-pencil mb-2">Oops!</h2>
           <p className="font-ui text-pencil/70 mb-6">{error}</p>
-          <button onClick={() => { clearError(); navigate("/"); }} className="btn-primary">
+          <button
+            onClick={() => {
+              clearError();
+              navigate("/");
+            }}
+            className="btn-primary"
+          >
             Back to Home
           </button>
         </div>
@@ -78,9 +89,18 @@ export function GamePage() {
       <div className="min-h-screen p-4 flex items-center justify-center">
         <div className="paper-card p-8 text-center">
           <div className="flex items-center justify-center gap-2 mb-4">
-            <div className="w-2 h-2 bg-tangerine rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-            <div className="w-2 h-2 bg-tangerine rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-            <div className="w-2 h-2 bg-tangerine rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+            <div
+              className="w-2 h-2 bg-tangerine rounded-full animate-bounce"
+              style={{ animationDelay: "0ms" }}
+            />
+            <div
+              className="w-2 h-2 bg-tangerine rounded-full animate-bounce"
+              style={{ animationDelay: "150ms" }}
+            />
+            <div
+              className="w-2 h-2 bg-tangerine rounded-full animate-bounce"
+              style={{ animationDelay: "300ms" }}
+            />
           </div>
           <p className="font-display text-xl text-pencil">Connecting...</p>
         </div>
@@ -100,7 +120,10 @@ export function GamePage() {
           <WaitingRoom gameCode={code} />
         </main>
         <footer className="text-center mt-8">
-          <button onClick={handleLeave} className="text-pencil/50 hover:text-pencil underline">
+          <button
+            onClick={handleLeave}
+            className="text-pencil/50 hover:text-pencil underline"
+          >
             Leave Game
           </button>
         </footer>
@@ -114,7 +137,10 @@ export function GamePage() {
         <h1 className="font-display text-2xl text-pencil text-shadow">
           Sight Word Guess Who
         </h1>
-        <button onClick={handleLeave} className="text-sm text-pencil/50 hover:text-pencil underline">
+        <button
+          onClick={handleLeave}
+          className="text-sm text-pencil/50 hover:text-pencil underline"
+        >
           Leave
         </button>
       </header>

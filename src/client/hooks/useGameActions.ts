@@ -9,6 +9,7 @@ export function useGameActions() {
     makeGuess,
     leaveGame,
     dispatch,
+    joinedGameCodeRef,
   } = useGame();
 
   const clearError = () => {
@@ -28,5 +29,6 @@ export function useGameActions() {
     leaveGame,
     clearError,
     reset,
+    joinedGameCodeRef,
   };
 }
