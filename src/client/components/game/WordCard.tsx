@@ -19,7 +19,7 @@ export const WordCard = memo(function WordCard({
   disabled,
 }: WordCardProps) {
   const handleClick = () => {
-    if (!disabled && !isFlipped && !isSecret) {
+    if (!disabled && !isSecret) {
       onClick();
     }
   };
@@ -31,10 +31,12 @@ export const WordCard = memo(function WordCard({
     }
   };
 
+  const isClickable = !disabled && !isSecret;
+
   return (
     <div
       role="button"
-      tabIndex={disabled || isFlipped || isSecret ? -1 : 0}
+      tabIndex={isClickable ? 0 : -1}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
       className={`
@@ -42,9 +44,9 @@ export const WordCard = memo(function WordCard({
         ${isFlipped ? "flipped" : ""}
         ${isSecret ? "secret" : ""}
         ${isOpponentFlipped ? "opacity-50" : ""}
-        ${disabled || isFlipped || isSecret ? "cursor-default" : "cursor-pointer"}
+        ${isClickable ? "cursor-pointer" : "cursor-default"}
       `}
-      aria-label={`Word card: ${card.word}${isFlipped ? " (flipped)" : ""}${isSecret ? " (your secret word)" : ""}`}
+      aria-label={`Word card: ${card.word}${isFlipped ? " (flipped - click to flip back)" : ""}${isSecret ? " (your secret word)" : ""}`}
     >
       <div className="word-card-inner">
         <div className="word-card-front bg-lined-paper p-2">
