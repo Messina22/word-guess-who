@@ -41,9 +41,14 @@ function shuffleArray<T>(array: T[]): T[] {
 }
 
 /** Select random words for the game board */
-export function selectWordsForGame(wordBank: WordEntry[], gridSize: GridSize): CardState[] {
+export function selectWordsForGame(
+  wordBank: WordEntry[],
+  gridSize: GridSize,
+): CardState[] {
   if (wordBank.length < gridSize) {
-    throw new Error(`Word bank has ${wordBank.length} words but needs ${gridSize}`);
+    throw new Error(
+      `Word bank has ${wordBank.length} words but needs ${gridSize}`,
+    );
   }
 
   // Shuffle and take the first gridSize words
@@ -57,7 +62,11 @@ export function selectWordsForGame(wordBank: WordEntry[], gridSize: GridSize): C
 }
 
 /** Create a new game session */
-export function createGameSession(configId: string, gridSize: GridSize, wordBank: WordEntry[]): GameSession {
+export function createGameSession(
+  configId: string,
+  gridSize: GridSize,
+  wordBank: WordEntry[],
+): GameSession {
   const now = new Date();
   const expiresAt = new Date(now.getTime() + 5 * 60 * 1000); // 5 minutes
 
@@ -84,23 +93,32 @@ export function createGameSession(configId: string, gridSize: GridSize, wordBank
 export function addPlayer(
   session: GameSession,
   playerName: string,
-  existingPlayerId?: string
+  existingPlayerId?: string,
 ): { player: Player; playerIndex: number } | { error: string } {
   // Check if game is full
   if (session.players.length >= 2) {
     // Check for reconnection
     if (existingPlayerId) {
-      const existingIndex = session.players.findIndex((p) => p.id === existingPlayerId);
+      const existingIndex = session.players.findIndex(
+        (p) => p.id === existingPlayerId,
+      );
       if (existingIndex !== -1) {
         session.players[existingIndex].connected = true;
-        return { player: session.players[existingIndex], playerIndex: existingIndex };
+        return {
+          player: session.players[existingIndex],
+          playerIndex: existingIndex,
+        };
       }
     }
     return { error: "Game is full" };
   }
 
   // Check for duplicate name
-  if (session.players.some((p) => p.name.toLowerCase() === playerName.toLowerCase())) {
+  if (
+    session.players.some(
+      (p) => p.name.toLowerCase() === playerName.toLowerCase(),
+    )
+  ) {
     return { error: "Player name already taken" };
   }
 
@@ -109,7 +127,9 @@ export function addPlayer(
   }
 
   // Assign secret word (random card that isn't already assigned)
-  const assignedIndices = new Set(session.players.map((p) => p.secretWordIndex));
+  const assignedIndices = new Set(
+    session.players.map((p) => p.secretWordIndex),
+  );
   const availableIndices = session.gameState.cards
     .map((_, i) => i)
     .filter((i) => !assignedIndices.has(i));
@@ -118,7 +138,8 @@ export function addPlayer(
     return { error: "No available secret words" };
   }
 
-  const secretWordIndex = availableIndices[Math.floor(Math.random() * availableIndices.length)];
+  const secretWordIndex =
+    availableIndices[Math.floor(Math.random() * availableIndices.length)];
 
   const player: Player = {
     id: existingPlayerId || generatePlayerId(),
@@ -140,7 +161,10 @@ export function addPlayer(
 }
 
 /** Mark a player as disconnected */
-export function disconnectPlayer(session: GameSession, playerId: string): boolean {
+export function disconnectPlayer(
+  session: GameSession,
+  playerId: string,
+): boolean {
   const player = session.players.find((p) => p.id === playerId);
   if (player) {
     player.connected = false;
@@ -151,14 +175,16 @@ export function disconnectPlayer(session: GameSession, playerId: string): boolea
 
 /** Check if both players are disconnected */
 export function allPlayersDisconnected(session: GameSession): boolean {
-  return session.players.length > 0 && session.players.every((p) => !p.connected);
+  return (
+    session.players.length > 0 && session.players.every((p) => !p.connected)
+  );
 }
 
 /** Flip a card for a player */
 export function flipCard(
   session: GameSession,
   playerId: string,
-  cardIndex: number
+  cardIndex: number,
 ): { success: true; playerIndex: number } | { success: false; error: string } {
   const playerIndex = session.players.findIndex((p) => p.id === playerId);
   if (playerIndex === -1) {
@@ -199,7 +225,7 @@ export function flipCard(
 export function askQuestion(
   session: GameSession,
   playerId: string,
-  question: string
+  question: string,
 ): { success: true; playerIndex: number } | { success: false; error: string } {
   const playerIndex = session.players.findIndex((p) => p.id === playerId);
   if (playerIndex === -1) {
@@ -230,8 +256,10 @@ export function askQuestion(
 export function answerQuestion(
   session: GameSession,
   playerId: string,
-  answer: boolean
-): { success: true; playerIndex: number; answer: boolean } | { success: false; error: string } {
+  answer: boolean,
+):
+  | { success: true; playerIndex: number; answer: boolean }
+  | { success: false; error: string } {
   const playerIndex = session.players.findIndex((p) => p.id === playerId);
   if (playerIndex === -1) {
     return { success: false, error: "Player not found" };
@@ -252,6 +280,8 @@ export function answerQuestion(
 
   session.gameState.pendingQuestion = null;
   session.gameState.awaitingAnswer = false;
+  // After the answer, it becomes the answerer's turn to ask or guess
+  session.gameState.currentTurn = playerIndex;
 
   return { success: true, playerIndex, answer };
 }
@@ -260,14 +290,16 @@ export function answerQuestion(
 export function makeGuess(
   session: GameSession,
   playerId: string,
-  guessedWord: string
-): {
-  success: true;
-  playerIndex: number;
-  correct: boolean;
-  opponentWord: string;
-  gameOver: boolean;
-} | { success: false; error: string } {
+  guessedWord: string,
+):
+  | {
+      success: true;
+      playerIndex: number;
+      correct: boolean;
+      opponentWord: string;
+      gameOver: boolean;
+    }
+  | { success: false; error: string } {
   const playerIndex = session.players.findIndex((p) => p.id === playerId);
   if (playerIndex === -1) {
     return { success: false, error: "Player not found" };
@@ -313,7 +345,7 @@ export function makeGuess(
 /** End turn without guessing (pass) */
 export function endTurn(
   session: GameSession,
-  playerId: string
+  playerId: string,
 ): { success: true; nextTurn: number } | { success: false; error: string } {
   const playerIndex = session.players.findIndex((p) => p.id === playerId);
   if (playerIndex === -1) {
@@ -350,7 +382,10 @@ export function extendSession(session: GameSession, minutes: number = 5): void {
 }
 
 /** Get the secret word for a player */
-export function getPlayerSecretWord(session: GameSession, playerIndex: number): string | null {
+export function getPlayerSecretWord(
+  session: GameSession,
+  playerIndex: number,
+): string | null {
   const player = session.players[playerIndex];
   if (!player || !session.gameState) {
     return null;

@@ -14,6 +14,7 @@ export function useGameState() {
     winner,
     mySecretWord,
     lastGuess,
+    lastAnswer,
     error,
     revealedSecrets,
   } = useGame();
@@ -44,6 +45,7 @@ export function useGameState() {
     winner,
     mySecretWord,
     lastGuess,
+    lastAnswer,
     error,
     revealedSecrets,
     isMyTurn,

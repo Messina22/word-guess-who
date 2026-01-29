@@ -28,6 +28,8 @@ interface GameContextState {
   winner: number | null;
   mySecretWord: string | null;
   lastGuess: { word: string; correct: boolean; playerIndex: number } | null;
+  /** Last yes/no answer (so the asker can see what the opponent answered) */
+  lastAnswer: boolean | null;
   error: string | null;
   revealedSecrets: [string, string] | null;
 }
@@ -53,6 +55,7 @@ const initialState: GameContextState = {
   winner: null,
   mySecretWord: null,
   lastGuess: null,
+  lastAnswer: null,
   error: null,
   revealedSecrets: null,
 };
@@ -97,6 +100,7 @@ function gameReducer(
             awaitingAnswer: message.awaitingAnswer,
             winner: message.winner,
             mySecretWord: message.mySecretWord,
+            lastAnswer: null,
             error: null,
           };
 
@@ -159,6 +163,7 @@ function gameReducer(
             ...state,
             pendingQuestion: message.question,
             awaitingAnswer: true,
+            lastAnswer: null,
           };
 
         case "question_answered":
@@ -167,6 +172,7 @@ function gameReducer(
             pendingQuestion: null,
             awaitingAnswer: false,
             currentTurn: state.currentTurn === 0 ? 1 : 0,
+            lastAnswer: message.answer,
           };
 
         case "guess_made":

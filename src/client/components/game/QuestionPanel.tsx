@@ -10,6 +10,7 @@ export function QuestionPanel() {
     waitingForAnswer,
     opponent,
     lastGuess,
+    lastAnswer,
     playerIndex,
   } = useGameState();
   const { askQuestion, answerQuestion, makeGuess } = useGameActions();
@@ -68,9 +69,7 @@ export function QuestionPanel() {
   if (waitingForAnswer && pendingQuestion) {
     return (
       <div className="paper-card p-4 sm:p-6">
-        <h3 className="font-display text-xl text-pencil mb-4">
-          You asked:
-        </h3>
+        <h3 className="font-display text-xl text-pencil mb-4">You asked:</h3>
         <p className="text-lg font-ui text-pencil mb-4 p-4 bg-crayon-blue/20 rounded-lg">
           "{pendingQuestion}"
         </p>
@@ -91,10 +90,19 @@ export function QuestionPanel() {
             {opponent?.name || "Opponent"}'s turn...
           </span>
         </div>
+        {lastAnswer !== null && (
+          <div className="mt-4 p-3 bg-crayon-blue/10 rounded-lg">
+            <p className="text-sm text-pencil">
+              {opponent?.name || "They"} answered:{" "}
+              <strong>{lastAnswer ? "Yes" : "No"}</strong>
+            </p>
+          </div>
+        )}
         {lastGuess && lastGuess.playerIndex !== playerIndex && (
           <div className="mt-4 p-3 bg-paper-red/10 rounded-lg">
             <p className="text-sm text-pencil">
-              {opponent?.name} guessed "{lastGuess.word}" - {lastGuess.correct ? "Correct!" : "Wrong!"}
+              {opponent?.name} guessed "{lastGuess.word}" -{" "}
+              {lastGuess.correct ? "Correct!" : "Wrong!"}
             </p>
           </div>
         )}
@@ -129,7 +137,10 @@ export function QuestionPanel() {
 
       {mode === "question" ? (
         <form onSubmit={handleAskQuestion}>
-          <label htmlFor="question-input" className="block font-display text-lg text-pencil mb-2">
+          <label
+            htmlFor="question-input"
+            className="block font-display text-lg text-pencil mb-2"
+          >
             Ask a yes/no question:
           </label>
           <input
@@ -150,7 +161,10 @@ export function QuestionPanel() {
         </form>
       ) : (
         <form onSubmit={handleMakeGuess}>
-          <label htmlFor="guess-input" className="block font-display text-lg text-pencil mb-2">
+          <label
+            htmlFor="guess-input"
+            className="block font-display text-lg text-pencil mb-2"
+          >
             Guess the secret word:
           </label>
           <input
@@ -175,9 +189,12 @@ export function QuestionPanel() {
       )}
 
       {lastGuess && lastGuess.playerIndex === playerIndex && (
-        <div className={`mt-4 p-3 rounded-lg ${lastGuess.correct ? "bg-grass/20" : "bg-paper-red/10"}`}>
+        <div
+          className={`mt-4 p-3 rounded-lg ${lastGuess.correct ? "bg-grass/20" : "bg-paper-red/10"}`}
+        >
           <p className="text-sm text-pencil">
-            You guessed "{lastGuess.word}" - {lastGuess.correct ? "Correct!" : "Wrong!"}
+            You guessed "{lastGuess.word}" -{" "}
+            {lastGuess.correct ? "Correct!" : "Wrong!"}
           </p>
         </div>
       )}
