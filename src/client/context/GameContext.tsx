@@ -147,13 +147,17 @@ function gameReducer(
 
         case "card_flipped": {
           const isMyFlip = message.playerIndex === state.playerIndex;
+          const toggleInList = (list: number[], index: number) =>
+            list.includes(index)
+              ? list.filter((i) => i !== index)
+              : [...list, index];
           return {
             ...state,
             myFlippedCards: isMyFlip
-              ? [...state.myFlippedCards, message.cardIndex]
+              ? toggleInList(state.myFlippedCards, message.cardIndex)
               : state.myFlippedCards,
             opponentFlippedCards: !isMyFlip
-              ? [...state.opponentFlippedCards, message.cardIndex]
+              ? toggleInList(state.opponentFlippedCards, message.cardIndex)
               : state.opponentFlippedCards,
           };
         }
