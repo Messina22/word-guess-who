@@ -16,9 +16,11 @@
     "outDir": "./dist",
     "rootDir": "./src",
     "baseUrl": ".",
+    "jsx": "react-jsx",
     "paths": {
       "@shared/*": ["src/shared/*"],
-      "@server/*": ["src/server/*"]
+      "@server/*": ["src/server/*"],
+      "@client/*": ["src/client/*"]
     },
     "types": ["bun-types"]
   },

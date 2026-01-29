@@ -14,11 +14,15 @@ import {
 } from "./routes/game";
 import { sessionManager, type WebSocketData } from "./session-manager";
 import type { ClientMessage } from "@shared/types";
+import { join } from "path";
+import { existsSync } from "fs";
 
 const PORT = process.env.PORT || 3000;
+const IS_PROD = process.env.NODE_ENV === "production";
+const CLIENT_DIST_PATH = join(import.meta.dir, "../../dist/client");
 
-/** Simple HTML page for root */
-const indexHtml = `<!DOCTYPE html>
+/** Simple HTML page for root (dev mode fallback) */
+const devIndexHtml = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -53,7 +57,7 @@ const indexHtml = `<!DOCTYPE html>
 <body>
   <h1>Sight Word Guess Who</h1>
   <p>A two-player educational game for practicing sight words</p>
-  <div class="status">Phase 2 Complete - Game Logic</div>
+  <div class="status">Development Mode - Run <code>bun run dev:client</code> for the React UI</div>
   <div class="api-link">
     <p>API endpoints:</p>
     <ul>
@@ -64,6 +68,40 @@ const indexHtml = `<!DOCTYPE html>
   </div>
 </body>
 </html>`;
+
+/** Serve a static file from the client dist directory */
+async function serveStaticFile(path: string): Promise<Response | null> {
+  const filePath = join(CLIENT_DIST_PATH, path);
+  const file = Bun.file(filePath);
+
+  if (await file.exists()) {
+    const contentType = getContentType(path);
+    return new Response(file, {
+      headers: { "Content-Type": contentType },
+    });
+  }
+
+  return null;
+}
+
+/** Get content type based on file extension */
+function getContentType(path: string): string {
+  const ext = path.split(".").pop()?.toLowerCase();
+  const types: Record<string, string> = {
+    html: "text/html",
+    css: "text/css",
+    js: "application/javascript",
+    json: "application/json",
+    png: "image/png",
+    jpg: "image/jpeg",
+    jpeg: "image/jpeg",
+    svg: "image/svg+xml",
+    ico: "image/x-icon",
+    woff: "font/woff",
+    woff2: "font/woff2",
+  };
+  return types[ext || ""] || "application/octet-stream";
+}
 
 /** Route an incoming request */
 async function handleRequest(request: Request, server: ReturnType<typeof Bun.serve>): Promise<Response> {
@@ -91,9 +129,28 @@ async function handleRequest(request: Request, server: ReturnType<typeof Bun.ser
     return new Response("WebSocket upgrade failed", { status: 400 });
   }
 
-  // Serve index page
+  // In production, serve static files from dist/client
+  if (IS_PROD && existsSync(CLIENT_DIST_PATH)) {
+    // Try to serve the exact file first
+    if (path !== "/" && !path.startsWith("/api") && path !== "/ws") {
+      const staticResponse = await serveStaticFile(path.slice(1));
+      if (staticResponse) {
+        return staticResponse;
+      }
+    }
+
+    // Serve index.html for root or SPA routes
+    if (method === "GET" && !path.startsWith("/api") && path !== "/ws") {
+      const indexResponse = await serveStaticFile("index.html");
+      if (indexResponse) {
+        return indexResponse;
+      }
+    }
+  }
+
+  // Dev mode: serve simple page pointing to Vite
   if (path === "/" && method === "GET") {
-    return new Response(indexHtml, {
+    return new Response(devIndexHtml, {
       headers: { "Content-Type": "text/html" },
     });
   }
