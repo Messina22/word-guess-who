@@ -8,11 +8,12 @@ import { QuestionLog } from "@client/components/game/QuestionLog";
 import { TurnIndicator } from "@client/components/game/TurnIndicator";
 import { GameOverOverlay } from "@client/components/game/GameOverOverlay";
 import { WaitingRoom } from "@client/components/lobby/WaitingRoom";
+import { WordSelectionScreen } from "@client/components/game/WordSelectionScreen";
 
 export function GamePage() {
   const { code } = useParams<{ code: string }>();
   const navigate = useNavigate();
-  const { session, connected, error, isWaiting, isFinished } = useGameState();
+  const { session, connected, error, isWaiting, isSelecting, isFinished } = useGameState();
   const { joinGame, leaveGame, clearError, joinedGameCodeRef } =
     useGameActions();
   const [hasJoined, setHasJoined] = useState(false);
@@ -119,6 +120,29 @@ export function GamePage() {
         </header>
         <main className="flex-1 flex items-center justify-center">
           <WaitingRoom gameCode={code} />
+        </main>
+        <footer className="text-center mt-8">
+          <button
+            onClick={handleLeave}
+            className="text-pencil/50 hover:text-pencil underline"
+          >
+            Leave Game
+          </button>
+        </footer>
+      </div>
+    );
+  }
+
+  if (isSelecting) {
+    return (
+      <div className="min-h-screen p-4 flex flex-col">
+        <header className="text-center mb-8">
+          <h1 className="font-display text-3xl text-pencil text-shadow">
+            Sight Word Guess Who
+          </h1>
+        </header>
+        <main className="flex-1 flex items-center justify-center">
+          <WordSelectionScreen />
         </main>
         <footer className="text-center mt-8">
           <button

@@ -27,7 +27,12 @@ export async function handleCreateGame(request: Request): Promise<Response> {
       return jsonResponse({ success: false, error: "configId is required" }, 400);
     }
 
-    const result = await sessionManager.createSession(body.configId, body.isLocalMode ?? false, body.showOnlyLastQuestion ?? false);
+    const result = await sessionManager.createSession(
+      body.configId,
+      body.isLocalMode ?? false,
+      body.showOnlyLastQuestion ?? false,
+      body.randomSecretWords ?? false,
+    );
 
     if ("error" in result) {
       return jsonResponse({ success: false, error: result.error }, 400);
@@ -58,6 +63,7 @@ export function handleGetGame(code: string): Response {
     configId: session.configId,
     isLocalMode: session.isLocalMode,
     showOnlyLastQuestion: session.showOnlyLastQuestion,
+    randomSecretWords: session.randomSecretWords,
     phase: session.phase,
     players: session.players.map((p) => ({
       id: p.id,

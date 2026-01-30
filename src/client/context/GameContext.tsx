@@ -41,6 +41,10 @@ interface GameContextState {
   revealedSecrets: [string, string] | null;
   /** History of all questions asked and their answers */
   questionHistory: QuestionLogEntry[];
+  /** Whether the player has selected their secret word (selecting phase) */
+  hasSelectedWord: boolean;
+  /** Whether the opponent has selected their secret word (selecting phase) */
+  opponentHasSelected: boolean;
 }
 
 type GameAction =
@@ -68,6 +72,8 @@ const initialState: GameContextState = {
   error: null,
   revealedSecrets: null,
   questionHistory: [],
+  hasSelectedWord: false,
+  opponentHasSelected: false,
 };
 
 function gameReducer(
@@ -114,6 +120,8 @@ function gameReducer(
             error: null,
             // Reset question history on new game (or could preserve for reconnect)
             questionHistory: [],
+            hasSelectedWord: message.hasSelectedWord ?? false,
+            opponentHasSelected: message.opponentHasSelected ?? false,
           };
 
         case "player_joined":
@@ -243,6 +251,13 @@ function gameReducer(
             error: "Game session has expired",
           };
 
+        case "word_selected":
+          // Opponent has selected their word (we don't know which one)
+          return {
+            ...state,
+            opponentHasSelected: true,
+          };
+
         default:
           return state;
       }
@@ -262,6 +277,7 @@ interface GameContextValue extends GameContextState {
   answerQuestion: (answer: boolean) => void;
   makeGuess: (word: string) => void;
   leaveGame: () => void;
+  selectSecretWord: (cardIndex: number) => void;
   /** Ref set when join_game is sent; used to avoid double-join (e.g. Strict Mode remount) */
   joinedGameCodeRef: React.MutableRefObject<string | null>;
 }
@@ -346,6 +362,13 @@ export function GameProvider({ children }: { children: ReactNode }) {
     dispatch({ type: "RESET" });
   }, [send]);
 
+  const selectSecretWord = useCallback(
+    (cardIndex: number) => {
+      send({ type: "select_secret_word", cardIndex });
+    },
+    [send],
+  );
+
   const value: GameContextValue = {
     ...state,
     dispatch,
@@ -356,6 +379,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     answerQuestion,
     makeGuess,
     leaveGame,
+    selectSecretWord,
     joinedGameCodeRef,
   };
 
