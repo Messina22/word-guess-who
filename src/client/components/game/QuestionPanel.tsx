@@ -4,6 +4,7 @@ import { useGameActions } from "@client/hooks/useGameActions";
 
 export function QuestionPanel() {
   const {
+    session,
     pendingQuestion,
     isMyTurn,
     mustAnswer,
@@ -18,6 +19,8 @@ export function QuestionPanel() {
   const [question, setQuestion] = useState("");
   const [guessWord, setGuessWord] = useState("");
   const [mode, setMode] = useState<"question" | "guess">("question");
+
+  const isLocalMode = session?.isLocalMode ?? false;
 
   const handleAskQuestion = (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,7 +39,8 @@ export function QuestionPanel() {
     }
   };
 
-  if (mustAnswer && pendingQuestion) {
+  // In online mode, handle answering opponent's questions
+  if (!isLocalMode && mustAnswer && pendingQuestion) {
     return (
       <div className="paper-card p-4 sm:p-6">
         <h3 className="font-display text-xl text-pencil mb-4">
@@ -66,7 +70,8 @@ export function QuestionPanel() {
     );
   }
 
-  if (waitingForAnswer && pendingQuestion) {
+  // In online mode, show waiting for answer state
+  if (!isLocalMode && waitingForAnswer && pendingQuestion) {
     return (
       <div className="paper-card p-4 sm:p-6">
         <h3 className="font-display text-xl text-pencil mb-4">You asked:</h3>
@@ -90,7 +95,7 @@ export function QuestionPanel() {
             {opponent?.name || "Opponent"}'s turn...
           </span>
         </div>
-        {lastAnswer !== null && (
+        {!isLocalMode && lastAnswer !== null && (
           <div className="mt-4 p-3 bg-crayon-blue/10 rounded-lg">
             <p className="text-sm text-pencil">
               {opponent?.name || "They"} answered:{" "}
@@ -106,10 +111,67 @@ export function QuestionPanel() {
             </p>
           </div>
         )}
+        {isLocalMode && (
+          <p className="mt-4 text-sm text-pencil/60">
+            Ask questions in person, then submit your guess when ready.
+          </p>
+        )}
       </div>
     );
   }
 
+  // Local mode: only show guess form (questions asked in person)
+  if (isLocalMode) {
+    return (
+      <div className="paper-card p-4 sm:p-6">
+        <div className="mb-4 p-3 bg-sunshine/20 rounded-lg">
+          <p className="text-sm text-pencil">
+            <strong>Local Mode:</strong> Ask questions in person, then submit your guess to win!
+          </p>
+        </div>
+
+        <form onSubmit={handleMakeGuess}>
+          <label
+            htmlFor="guess-input"
+            className="block font-display text-lg text-pencil mb-2"
+          >
+            Guess the secret word:
+          </label>
+          <input
+            id="guess-input"
+            type="text"
+            value={guessWord}
+            onChange={(e) => setGuessWord(e.target.value)}
+            placeholder="Enter your guess..."
+            className="input-field mb-4"
+          />
+          <button
+            type="submit"
+            disabled={!guessWord.trim()}
+            className="btn-primary w-full bg-grape hover:bg-grape/90 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Make Guess
+          </button>
+          <p className="text-xs text-pencil/60 mt-2 text-center">
+            Warning: Wrong guesses end your turn!
+          </p>
+        </form>
+
+        {lastGuess && lastGuess.playerIndex === playerIndex && (
+          <div
+            className={`mt-4 p-3 rounded-lg ${lastGuess.correct ? "bg-grass/20" : "bg-paper-red/10"}`}
+          >
+            <p className="text-sm text-pencil">
+              You guessed "{lastGuess.word}" -{" "}
+              {lastGuess.correct ? "Correct!" : "Wrong!"}
+            </p>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Online mode: show question/guess tabs
   return (
     <div className="paper-card p-4 sm:p-6">
       <div className="flex gap-2 mb-4">

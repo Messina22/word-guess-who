@@ -15,6 +15,13 @@ import type {
   ClientMessage,
 } from "@shared/types";
 
+/** An entry in the question history log */
+export interface QuestionLogEntry {
+  question: string;
+  answer: boolean | null; // null if not yet answered
+  askerIndex: number;
+}
+
 interface GameContextState {
   connected: boolean;
   session: PublicGameSession | null;
@@ -32,6 +39,8 @@ interface GameContextState {
   lastAnswer: boolean | null;
   error: string | null;
   revealedSecrets: [string, string] | null;
+  /** History of all questions asked and their answers */
+  questionHistory: QuestionLogEntry[];
 }
 
 type GameAction =
@@ -58,6 +67,7 @@ const initialState: GameContextState = {
   lastAnswer: null,
   error: null,
   revealedSecrets: null,
+  questionHistory: [],
 };
 
 function gameReducer(
@@ -102,6 +112,8 @@ function gameReducer(
             mySecretWord: message.mySecretWord,
             lastAnswer: null,
             error: null,
+            // Reset question history on new game (or could preserve for reconnect)
+            questionHistory: [],
           };
 
         case "player_joined":
@@ -168,16 +180,36 @@ function gameReducer(
             pendingQuestion: message.question,
             awaitingAnswer: true,
             lastAnswer: null,
+            // Add the new question to history (answer is null until answered)
+            questionHistory: [
+              ...state.questionHistory,
+              {
+                question: message.question,
+                answer: null,
+                askerIndex: message.playerIndex,
+              },
+            ],
           };
 
-        case "question_answered":
+        case "question_answered": {
+          // Update the last question in history with the answer
+          const updatedHistory = [...state.questionHistory];
+          if (updatedHistory.length > 0) {
+            const lastEntry = updatedHistory[updatedHistory.length - 1];
+            updatedHistory[updatedHistory.length - 1] = {
+              ...lastEntry,
+              answer: message.answer,
+            };
+          }
           return {
             ...state,
             pendingQuestion: null,
             awaitingAnswer: false,
             currentTurn: state.currentTurn === 0 ? 1 : 0,
             lastAnswer: message.answer,
+            questionHistory: updatedHistory,
           };
+        }
 
         case "guess_made":
           return {

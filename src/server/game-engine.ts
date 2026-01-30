@@ -66,6 +66,7 @@ export function createGameSession(
   configId: string,
   gridSize: GridSize,
   wordBank: WordEntry[],
+  isLocalMode: boolean = false,
 ): GameSession {
   const now = new Date();
   const expiresAt = new Date(now.getTime() + 5 * 60 * 1000); // 5 minutes
@@ -75,6 +76,7 @@ export function createGameSession(
   return {
     code: generateGameCode(),
     configId,
+    isLocalMode,
     phase: "waiting",
     players: [],
     gameState: {
@@ -205,10 +207,8 @@ export function flipCard(
     return { success: false, error: "Invalid card index" };
   }
 
-  // Can't flip your own secret word
-  if (cardIndex === player.secretWordIndex) {
-    return { success: false, error: "Cannot flip your secret word" };
-  }
+  // Players CAN flip their own secret word - if a question eliminates it,
+  // they should be able to flip it to track the game state properly
 
   // Toggle flip state
   const flippedIndex = player.flippedCards.indexOf(cardIndex);

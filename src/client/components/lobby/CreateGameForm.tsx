@@ -8,6 +8,7 @@ export function CreateGameForm() {
   const [configs, setConfigs] = useState<GameConfig[]>([]);
   const [selectedConfig, setSelectedConfig] = useState("");
   const [playerName, setPlayerName] = useState("");
+  const [isLocalMode, setIsLocalMode] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -29,7 +30,10 @@ export function CreateGameForm() {
     setLoading(true);
     setError(null);
 
-    const response = await api.games.create({ configId: selectedConfig });
+    const response = await api.games.create({
+      configId: selectedConfig,
+      isLocalMode,
+    });
 
     if (response.success && response.data) {
       localStorage.setItem("playerName", playerName.trim());
@@ -61,7 +65,7 @@ export function CreateGameForm() {
         />
       </div>
 
-      <div className="mb-6">
+      <div className="mb-4">
         <label htmlFor="config" className="block font-ui text-sm text-pencil/70 mb-1">
           Word Set
         </label>
@@ -78,6 +82,23 @@ export function CreateGameForm() {
             </option>
           ))}
         </select>
+      </div>
+
+      <div className="mb-6">
+        <label className="flex items-center gap-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={isLocalMode}
+            onChange={(e) => setIsLocalMode(e.target.checked)}
+            className="w-5 h-5 rounded border-pencil/30 text-crayon-blue focus:ring-crayon-blue"
+          />
+          <div>
+            <span className="font-ui text-sm text-pencil">Local 2-Player Mode</span>
+            <p className="font-ui text-xs text-pencil/60">
+              Ask questions in person - only submit word guesses
+            </p>
+          </div>
+        </label>
       </div>
 
       {error && (

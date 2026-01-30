@@ -48,7 +48,10 @@ class SessionManager {
   private rooms: Map<string, GameRoom> = new Map();
 
   /** Create a new game session */
-  async createSession(configId: string): Promise<GameSession | { error: string }> {
+  async createSession(
+    configId: string,
+    isLocalMode: boolean = false,
+  ): Promise<GameSession | { error: string }> {
     const config = getConfig(configId);
     if (!config) {
       return { error: "Configuration not found" };
@@ -65,7 +68,12 @@ class SessionManager {
       }
     } while (this.rooms.has(gameCode));
 
-    const session = createGameSession(configId, config.settings.gridSize, config.wordBank);
+    const session = createGameSession(
+      configId,
+      config.settings.gridSize,
+      config.wordBank,
+      isLocalMode,
+    );
     session.code = gameCode; // Use the verified unique code
 
     const room: GameRoom = {
@@ -340,6 +348,7 @@ class SessionManager {
       session: {
         code: session.code,
         configId: session.configId,
+        isLocalMode: session.isLocalMode,
         phase: session.phase,
         players: session.players.map((p) => ({
           id: p.id,
