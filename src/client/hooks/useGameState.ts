@@ -18,11 +18,14 @@ export function useGameState() {
     error,
     revealedSecrets,
     questionHistory,
+    hasSelectedWord,
+    opponentHasSelected,
   } = useGame();
 
   const isMyTurn = playerIndex !== null && currentTurn === playerIndex;
   const isPlaying = session?.phase === "playing";
   const isWaiting = session?.phase === "waiting";
+  const isSelecting = session?.phase === "selecting";
   const isFinished = session?.phase === "finished";
   const iWon = winner !== null && winner === playerIndex;
   const opponentIndex = playerIndex === 0 ? 1 : 0;
@@ -50,9 +53,12 @@ export function useGameState() {
     error,
     revealedSecrets,
     questionHistory,
+    hasSelectedWord,
+    opponentHasSelected,
     isMyTurn,
     isPlaying,
     isWaiting,
+    isSelecting,
     isFinished,
     iWon,
     opponentIndex,

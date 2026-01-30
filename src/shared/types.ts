@@ -79,14 +79,16 @@ export interface GameConfigRow {
 // ============================================
 
 /** Game session phases */
-export type GamePhase = "waiting" | "playing" | "finished";
+export type GamePhase = "waiting" | "selecting" | "playing" | "finished";
 
 /** Player in a game session */
 export interface Player {
   id: string;
   name: string;
-  /** Index of the player's secret word in the word grid */
-  secretWordIndex: number;
+  /** Index of the player's secret word in the word grid (null until selected) */
+  secretWordIndex: number | null;
+  /** Whether this player has selected their secret word */
+  hasSelectedWord: boolean;
   /** Indices of cards this player has flipped (eliminated) */
   flippedCards: number[];
   /** Whether this player is currently connected */
@@ -123,6 +125,8 @@ export interface GameSession {
   isLocalMode: boolean;
   /** Whether to show only the most recent question in the log */
   showOnlyLastQuestion: boolean;
+  /** Whether secret words are randomly assigned (true) or player-selected (false) */
+  randomSecretWords: boolean;
   /** Current phase of the game */
   phase: GamePhase;
   /** Players in the session (max 2) */
@@ -143,6 +147,8 @@ export interface PublicGameSession {
   isLocalMode: boolean;
   /** Whether to show only the most recent question in the log */
   showOnlyLastQuestion: boolean;
+  /** Whether secret words are randomly assigned (true) or player-selected (false) */
+  randomSecretWords: boolean;
   phase: GamePhase;
   players: Array<{ id: string; name: string; connected: boolean }>;
   createdAt: string;
@@ -159,7 +165,8 @@ export type ClientMessageType =
   | "ask_question"
   | "answer_question"
   | "make_guess"
-  | "leave_game";
+  | "leave_game"
+  | "select_secret_word";
 
 /** Server → Client message types */
 export type ServerMessageType =
@@ -173,7 +180,8 @@ export type ServerMessageType =
   | "question_answered"
   | "guess_made"
   | "game_over"
-  | "game_expired";
+  | "game_expired"
+  | "word_selected";
 
 /** Base client message */
 interface ClientMessageBase {
@@ -218,6 +226,12 @@ export interface LeaveGameMessage extends ClientMessageBase {
   type: "leave_game";
 }
 
+/** Select a secret word during selecting phase */
+export interface SelectSecretWordMessage extends ClientMessageBase {
+  type: "select_secret_word";
+  cardIndex: number;
+}
+
 /** Union of all client messages */
 export type ClientMessage =
   | JoinGameMessage
@@ -225,7 +239,8 @@ export type ClientMessage =
   | AskQuestionMessage
   | AnswerQuestionMessage
   | MakeGuessMessage
-  | LeaveGameMessage;
+  | LeaveGameMessage
+  | SelectSecretWordMessage;
 
 /** Base server message */
 interface ServerMessageBase {
@@ -258,8 +273,12 @@ export interface GameStateMessage extends ServerMessageBase {
   awaitingAnswer: boolean;
   /** Winner index if game is over */
   winner: number | null;
-  /** Player's own secret word (for display) */
-  mySecretWord: string;
+  /** Player's own secret word (for display, null during selection) */
+  mySecretWord: string | null;
+  /** Whether the player has selected their secret word (during selecting phase) */
+  hasSelectedWord?: boolean;
+  /** Whether the opponent has selected their secret word (during selecting phase) */
+  opponentHasSelected?: boolean;
 }
 
 /** Another player joined */
@@ -324,6 +343,12 @@ export interface GameExpiredMessage extends ServerMessageBase {
   type: "game_expired";
 }
 
+/** A player selected their secret word (sent to opponent without revealing which word) */
+export interface WordSelectedMessage extends ServerMessageBase {
+  type: "word_selected";
+  playerIndex: number;
+}
+
 /** Union of all server messages */
 export type ServerMessage =
   | ErrorMessage
@@ -336,7 +361,8 @@ export type ServerMessage =
   | QuestionAnsweredMessage
   | GuessMadeMessage
   | GameOverMessage
-  | GameExpiredMessage;
+  | GameExpiredMessage
+  | WordSelectedMessage;
 
 // ============================================
 // API Types for Game Sessions
@@ -349,6 +375,8 @@ export interface CreateGameInput {
   isLocalMode?: boolean;
   /** Show only the most recent question in the log */
   showOnlyLastQuestion?: boolean;
+  /** Automatically assign random secret words (otherwise players choose) */
+  randomSecretWords?: boolean;
 }
 
 /** Response when creating a game */

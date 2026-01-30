@@ -4,11 +4,20 @@ A web-based educational game inspired by the classic "Guess Who" board game, usi
 
 ## How It Works
 
-1. **Setup**: An instructor creates a game configuration with a word bank and suggested questions
-2. **Game Start**: Two players join a game session and each receives a secret word
-3. **Gameplay**: Players take turns asking yes/no questions (e.g., "Does your word have the letter 'e'?")
-4. **Card Flipping**: Players tap cards to eliminate words based on answers
-5. **Winning**: First player to correctly guess the opponent's word wins
+1. **Create a Game**: Choose a word set, configure game options, and share the 6-character game code
+2. **Join & Select**: Both players join and select their secret word from the board (or have words randomly assigned)
+3. **Ask Questions**: Take turns asking yes/no questions (e.g., "Does your word have the letter 'e'?")
+4. **Eliminate Words**: Tap cards to flip/eliminate words based on the answers
+5. **Make a Guess**: When ready, guess your opponent's secret word to win!
+
+## Features
+
+- **Real-time Multiplayer**: WebSocket-based gameplay with instant updates
+- **Secret Word Selection**: Players choose their own secret word, or enable random assignment
+- **Local 2-Player Mode**: Ask questions in person, only submit word guesses through the app
+- **Question History**: Track all questions asked and their answers
+- **Reconnection Support**: Rejoin a game if you get disconnected
+- **Responsive Design**: Works on desktop and mobile devices
 
 ## Tech Stack
 
@@ -50,6 +59,17 @@ bun run lint         # Run ESLint
 bun run typecheck    # TypeScript type checking
 ```
 
+## Game Options
+
+When creating a game, you can configure:
+
+| Option | Description |
+|--------|-------------|
+| **Word Set** | Choose which collection of sight words to use |
+| **Local 2-Player Mode** | Ask questions verbally, only submit guesses through the app |
+| **Show Only Last Question** | Display only the most recent question in the log |
+| **Random Secret Words** | Auto-assign secret words instead of letting players choose |
+
 ## API Endpoints
 
 ### Configuration API
@@ -74,32 +94,47 @@ bun run typecheck    # TypeScript type checking
 
 ```
 src/
-├── client/             # React frontend
-│   ├── components/     # UI components
-│   │   ├── game/       # Game board, cards, question panel
-│   │   └── lobby/      # Create/join game forms
-│   ├── context/        # React Context for game state
-│   ├── hooks/          # Custom hooks (useGameState, etc.)
-│   ├── lib/            # WebSocket client, API client
-│   ├── pages/          # HomePage, GamePage
-│   ├── App.tsx         # Router setup
-│   ├── main.tsx        # Entry point
-│   └── index.css       # Tailwind + custom styles
-├── server/             # Bun HTTP server
-│   ├── index.ts        # Server entry point
-│   ├── db.ts           # SQLite database
-│   ├── config-manager.ts
+├── client/                 # React frontend
+│   ├── components/
+│   │   ├── game/           # GameBoard, WordCard, QuestionPanel, QuestionLog,
+│   │   │                   # TurnIndicator, GameOverOverlay, WordSelectionScreen
+│   │   └── lobby/          # CreateGameForm, JoinGameForm, WaitingRoom
+│   ├── context/            # GameContext (state management)
+│   ├── hooks/              # useGameState, useGameActions, useWebSocket
+│   ├── lib/                # WebSocket client, API client
+│   ├── pages/              # HomePage, GamePage
+│   ├── App.tsx             # Router setup
+│   ├── main.tsx            # Entry point
+│   └── index.css           # Tailwind + custom styles
+├── server/                 # Bun HTTP server
+│   ├── index.ts            # Server entry point
+│   ├── db.ts               # SQLite database
+│   ├── config-manager.ts   # Game configuration CRUD
 │   ├── session-manager.ts  # WebSocket game sessions
-│   ├── game-engine.ts  # Game logic
+│   ├── game-engine.ts      # Core game logic
 │   └── routes/
-│       ├── api.ts      # Config REST handlers
-│       └── game.ts     # Game session handlers
-└── shared/             # Shared code
-    ├── types.ts        # TypeScript interfaces
-    └── validation.ts   # Zod schemas
-configs/                # Game configuration JSON files
-data/                   # SQLite database (gitignored)
-dist/                   # Production builds (gitignored)
+│       ├── api.ts          # Config REST handlers
+│       └── game.ts         # Game session handlers
+└── shared/                 # Shared code
+    ├── types.ts            # TypeScript interfaces
+    └── validation.ts       # Zod schemas
+configs/                    # Game configuration JSON files
+data/                       # SQLite database (gitignored)
+dist/                       # Production builds (gitignored)
+```
+
+## Game Flow
+
+```
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│   waiting   │ ──▶ │  selecting  │ ──▶ │   playing   │ ──▶ │  finished   │
+│             │     │             │     │             │     │             │
+│ Waiting for │     │ Players     │     │ Ask/answer  │     │ Winner      │
+│ 2nd player  │     │ pick words  │     │ questions   │     │ announced   │
+└─────────────┘     └─────────────┘     └─────────────┘     └─────────────┘
+                          │
+                          │ (skipped if randomSecretWords=true)
+                          ▼
 ```
 
 ## Art Style

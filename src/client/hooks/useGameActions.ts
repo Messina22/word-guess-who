@@ -8,6 +8,7 @@ export function useGameActions() {
     answerQuestion,
     makeGuess,
     leaveGame,
+    selectSecretWord,
     dispatch,
     joinedGameCodeRef,
   } = useGame();
@@ -27,6 +28,7 @@ export function useGameActions() {
     answerQuestion,
     makeGuess,
     leaveGame,
+    selectSecretWord,
     clearError,
     reset,
     joinedGameCodeRef,

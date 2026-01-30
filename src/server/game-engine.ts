@@ -68,6 +68,7 @@ export function createGameSession(
   wordBank: WordEntry[],
   isLocalMode: boolean = false,
   showOnlyLastQuestion: boolean = false,
+  randomSecretWords: boolean = false,
 ): GameSession {
   const now = new Date();
   const expiresAt = new Date(now.getTime() + 5 * 60 * 1000); // 5 minutes
@@ -79,6 +80,7 @@ export function createGameSession(
     configId,
     isLocalMode,
     showOnlyLastQuestion,
+    randomSecretWords,
     phase: "waiting",
     players: [],
     gameState: {
@@ -130,25 +132,32 @@ export function addPlayer(
     return { error: "Game not initialized" };
   }
 
-  // Assign secret word (random card that isn't already assigned)
-  const assignedIndices = new Set(
-    session.players.map((p) => p.secretWordIndex),
-  );
-  const availableIndices = session.gameState.cards
-    .map((_, i) => i)
-    .filter((i) => !assignedIndices.has(i));
+  let secretWordIndex: number | null = null;
+  let hasSelectedWord = false;
 
-  if (availableIndices.length === 0) {
-    return { error: "No available secret words" };
+  if (session.randomSecretWords) {
+    // Assign secret word randomly (random card that isn't already assigned)
+    const assignedIndices = new Set(
+      session.players.map((p) => p.secretWordIndex).filter((i) => i !== null),
+    );
+    const availableIndices = session.gameState.cards
+      .map((_, i) => i)
+      .filter((i) => !assignedIndices.has(i));
+
+    if (availableIndices.length === 0) {
+      return { error: "No available secret words" };
+    }
+
+    secretWordIndex =
+      availableIndices[Math.floor(Math.random() * availableIndices.length)];
+    hasSelectedWord = true;
   }
-
-  const secretWordIndex =
-    availableIndices[Math.floor(Math.random() * availableIndices.length)];
 
   const player: Player = {
     id: existingPlayerId || generatePlayerId(),
     name: playerName,
     secretWordIndex,
+    hasSelectedWord,
     flippedCards: [],
     connected: true,
   };
@@ -156,9 +165,15 @@ export function addPlayer(
   session.players.push(player);
   const playerIndex = session.players.length - 1;
 
-  // Start the game when both players have joined
+  // When both players have joined
   if (session.players.length === 2) {
-    session.phase = "playing";
+    if (session.randomSecretWords) {
+      // Start playing immediately with random words
+      session.phase = "playing";
+    } else {
+      // Go to selecting phase for players to choose their words
+      session.phase = "selecting";
+    }
   }
 
   return { player, playerIndex };
@@ -323,6 +338,9 @@ export function makeGuess(
 
   const opponentIndex = playerIndex === 0 ? 1 : 0;
   const opponent = session.players[opponentIndex];
+  if (opponent.secretWordIndex === null) {
+    return { success: false, error: "Opponent has not selected a word" };
+  }
   const opponentWord = session.gameState.cards[opponent.secretWordIndex].word;
 
   const correct = guessedWord.toLowerCase() === opponentWord.toLowerCase();
@@ -383,13 +401,64 @@ export function extendSession(session: GameSession, minutes: number = 5): void {
   session.expiresAt = newExpiry.toISOString();
 }
 
+/** Select a secret word for a player during the selecting phase */
+export function selectSecretWord(
+  session: GameSession,
+  playerId: string,
+  cardIndex: number,
+):
+  | { success: true; playerIndex: number; bothSelected: boolean }
+  | { success: false; error: string } {
+  const playerIndex = session.players.findIndex((p) => p.id === playerId);
+  if (playerIndex === -1) {
+    return { success: false, error: "Player not found" };
+  }
+
+  if (session.phase !== "selecting") {
+    return { success: false, error: "Game is not in selecting phase" };
+  }
+
+  const player = session.players[playerIndex];
+  if (player.hasSelectedWord) {
+    return { success: false, error: "You have already selected a word" };
+  }
+
+  if (!session.gameState) {
+    return { success: false, error: "Game state not initialized" };
+  }
+
+  // Validate card index
+  if (cardIndex < 0 || cardIndex >= session.gameState.cards.length) {
+    return { success: false, error: "Invalid card index" };
+  }
+
+  // Check if opponent already selected this word
+  const opponentIndex = playerIndex === 0 ? 1 : 0;
+  const opponent = session.players[opponentIndex];
+  if (opponent && opponent.secretWordIndex === cardIndex) {
+    return { success: false, error: "This word is already taken by your opponent" };
+  }
+
+  // Assign the word
+  player.secretWordIndex = cardIndex;
+  player.hasSelectedWord = true;
+
+  // Check if both players have selected
+  const bothSelected = session.players.every((p) => p.hasSelectedWord);
+  if (bothSelected) {
+    session.phase = "playing";
+  }
+
+  return { success: true, playerIndex, bothSelected };
+}
+
 /** Get the secret word for a player */
 export function getPlayerSecretWord(
   session: GameSession,
   playerIndex: number,
 ): string | null {
   const player = session.players[playerIndex];
-  if (!player || !session.gameState) {
+  if (!player || !session.gameState || player.secretWordIndex === null) {
     return null;
   }
   return session.gameState.cards[player.secretWordIndex].word;

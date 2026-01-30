@@ -26,6 +26,7 @@ import {
   extendSession,
   getPlayerSecretWord,
   generateGameCode,
+  selectSecretWord,
 } from "./game-engine";
 import { getConfig } from "./config-manager";
 
@@ -52,6 +53,7 @@ class SessionManager {
     configId: string,
     isLocalMode: boolean = false,
     showOnlyLastQuestion: boolean = false,
+    randomSecretWords: boolean = false,
   ): Promise<GameSession | { error: string }> {
     const config = getConfig(configId);
     if (!config) {
@@ -75,6 +77,7 @@ class SessionManager {
       config.wordBank,
       isLocalMode,
       showOnlyLastQuestion,
+      randomSecretWords,
     );
     session.code = gameCode; // Use the verified unique code
 
@@ -156,8 +159,8 @@ class SessionManager {
         playerIndex,
       });
 
-      // If game just started (second player joined), send updated state to first player
-      if (room.session.phase === "playing" && room.session.players.length === 2) {
+      // If game just transitioned (second player joined), send updated state to first player
+      if ((room.session.phase === "playing" || room.session.phase === "selecting") && room.session.players.length === 2) {
         const firstPlayerSocket = room.sockets.get(room.session.players[0].id);
         if (firstPlayerSocket) {
           this.sendGameState(firstPlayerSocket, room.session, 0);
@@ -232,6 +235,10 @@ class SessionManager {
 
       case "make_guess":
         this.handleMakeGuess(room, playerId, message.word);
+        break;
+
+      case "select_secret_word":
+        this.handleSelectSecretWord(room, playerId, message.cardIndex);
         break;
 
       case "leave_game":
@@ -333,6 +340,40 @@ class SessionManager {
     }
   }
 
+  /** Handle secret word selection */
+  private handleSelectSecretWord(room: GameRoom, playerId: string, cardIndex: number): void {
+    const result = selectSecretWord(room.session, playerId, cardIndex);
+
+    if (!result.success) {
+      const socket = room.sockets.get(playerId);
+      if (socket) this.sendError(socket, result.error);
+      return;
+    }
+
+    // Send updated game state to the selecting player
+    const selectingSocket = room.sockets.get(playerId);
+    if (selectingSocket) {
+      this.sendGameState(selectingSocket, room.session, result.playerIndex);
+    }
+
+    // Notify opponent that this player has selected (without revealing which word)
+    this.broadcastToOthers(room, playerId, {
+      type: "word_selected",
+      playerIndex: result.playerIndex,
+    });
+
+    // If both players have selected, send full game state to both
+    if (result.bothSelected) {
+      for (let i = 0; i < room.session.players.length; i++) {
+        const player = room.session.players[i];
+        const socket = room.sockets.get(player.id);
+        if (socket) {
+          this.sendGameState(socket, room.session, i);
+        }
+      }
+    }
+  }
+
   /** Send full game state to a player */
   private sendGameState(
     ws: ServerWebSocket<WebSocketData>,
@@ -352,6 +393,7 @@ class SessionManager {
         configId: session.configId,
         isLocalMode: session.isLocalMode,
         showOnlyLastQuestion: session.showOnlyLastQuestion,
+        randomSecretWords: session.randomSecretWords,
         phase: session.phase,
         players: session.players.map((p) => ({
           id: p.id,
@@ -368,7 +410,11 @@ class SessionManager {
       pendingQuestion: session.gameState.pendingQuestion,
       awaitingAnswer: session.gameState.awaitingAnswer,
       winner: session.gameState.winner,
-      mySecretWord: session.gameState.cards[player.secretWordIndex].word,
+      mySecretWord: player.secretWordIndex !== null
+        ? session.gameState.cards[player.secretWordIndex].word
+        : null,
+      hasSelectedWord: player.hasSelectedWord,
+      opponentHasSelected: opponent?.hasSelectedWord ?? false,
     };
 
     this.send(ws, message);
