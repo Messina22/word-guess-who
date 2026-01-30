@@ -121,6 +121,8 @@ export interface GameSession {
   configId: string;
   /** Whether this is a local 2-player mode (questions asked in person) */
   isLocalMode: boolean;
+  /** Whether to show only the most recent question in the log */
+  showOnlyLastQuestion: boolean;
   /** Current phase of the game */
   phase: GamePhase;
   /** Players in the session (max 2) */
@@ -139,6 +141,8 @@ export interface PublicGameSession {
   configId: string;
   /** Whether this is a local 2-player mode (questions asked in person) */
   isLocalMode: boolean;
+  /** Whether to show only the most recent question in the log */
+  showOnlyLastQuestion: boolean;
   phase: GamePhase;
   players: Array<{ id: string; name: string; connected: boolean }>;
   createdAt: string;
@@ -343,6 +347,8 @@ export interface CreateGameInput {
   configId: string;
   /** Enable local 2-player mode (questions asked in person) */
   isLocalMode?: boolean;
+  /** Show only the most recent question in the log */
+  showOnlyLastQuestion?: boolean;
 }
 
 /** Response when creating a game */

@@ -51,6 +51,7 @@ class SessionManager {
   async createSession(
     configId: string,
     isLocalMode: boolean = false,
+    showOnlyLastQuestion: boolean = false,
   ): Promise<GameSession | { error: string }> {
     const config = getConfig(configId);
     if (!config) {
@@ -73,6 +74,7 @@ class SessionManager {
       config.settings.gridSize,
       config.wordBank,
       isLocalMode,
+      showOnlyLastQuestion,
     );
     session.code = gameCode; // Use the verified unique code
 
@@ -349,6 +351,7 @@ class SessionManager {
         code: session.code,
         configId: session.configId,
         isLocalMode: session.isLocalMode,
+        showOnlyLastQuestion: session.showOnlyLastQuestion,
         phase: session.phase,
         players: session.players.map((p) => ({
           id: p.id,

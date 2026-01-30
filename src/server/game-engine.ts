@@ -67,6 +67,7 @@ export function createGameSession(
   gridSize: GridSize,
   wordBank: WordEntry[],
   isLocalMode: boolean = false,
+  showOnlyLastQuestion: boolean = false,
 ): GameSession {
   const now = new Date();
   const expiresAt = new Date(now.getTime() + 5 * 60 * 1000); // 5 minutes
@@ -77,6 +78,7 @@ export function createGameSession(
     code: generateGameCode(),
     configId,
     isLocalMode,
+    showOnlyLastQuestion,
     phase: "waiting",
     players: [],
     gameState: {
