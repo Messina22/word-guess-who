@@ -9,6 +9,7 @@ export function CreateGameForm() {
   const [selectedConfig, setSelectedConfig] = useState("");
   const [playerName, setPlayerName] = useState("");
   const [isLocalMode, setIsLocalMode] = useState(false);
+  const [showOnlyLastQuestion, setShowOnlyLastQuestion] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -33,6 +34,7 @@ export function CreateGameForm() {
     const response = await api.games.create({
       configId: selectedConfig,
       isLocalMode,
+      showOnlyLastQuestion,
     });
 
     if (response.success && response.data) {
@@ -84,7 +86,7 @@ export function CreateGameForm() {
         </select>
       </div>
 
-      <div className="mb-6">
+      <div className="mb-4">
         <label className="flex items-center gap-3 cursor-pointer">
           <input
             type="checkbox"
@@ -96,6 +98,23 @@ export function CreateGameForm() {
             <span className="font-ui text-sm text-pencil">Local 2-Player Mode</span>
             <p className="font-ui text-xs text-pencil/60">
               Ask questions in person - only submit word guesses
+            </p>
+          </div>
+        </label>
+      </div>
+
+      <div className="mb-6">
+        <label className="flex items-center gap-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={showOnlyLastQuestion}
+            onChange={(e) => setShowOnlyLastQuestion(e.target.checked)}
+            className="w-5 h-5 rounded border-pencil/30 text-crayon-blue focus:ring-crayon-blue"
+          />
+          <div>
+            <span className="font-ui text-sm text-pencil">Show Only Last Question</span>
+            <p className="font-ui text-xs text-pencil/60">
+              Only display the most recent question in the log
             </p>
           </div>
         </label>
