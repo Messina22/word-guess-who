@@ -215,7 +215,7 @@ export function InstructorPage() {
       ...buildDraftFromConfig(config),
       id: undefined,
       name: `${config.name} (Copy)`,
-      author: instructorName.trim() || config.author,
+      author: instructorName.trim() || undefined,
     });
     setSaveError(null);
     setSaveMessage(null);
@@ -676,7 +676,7 @@ export function InstructorPage() {
 
                 <div className="grid sm:grid-cols-2 gap-3">
                   {draft.wordBank.map((entry, index) => (
-                    <div key={`${entry.word}-${index}`} className="flex gap-2">
+                    <div key={index} className="flex gap-2">
                       <input
                         type="text"
                         value={entry.word}
@@ -732,7 +732,7 @@ export function InstructorPage() {
                 <div className="space-y-3">
                   {draft.suggestedQuestions.map((question, index) => (
                     <div
-                      key={`${question.text}-${index}`}
+                      key={index}
                       className="grid sm:grid-cols-[2fr_1fr_auto] gap-2"
                     >
                       <input

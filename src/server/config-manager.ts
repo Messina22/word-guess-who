@@ -66,7 +66,11 @@ export function createConfig(
   const validInput = validation.data;
 
   // Generate ID if not provided
-  const id = validInput.id || generateIdFromName(validInput.name);
+  const generatedId = generateIdFromName(validInput.name);
+  if (!validInput.id && !generatedId) {
+    return { success: false, errors: ["Unable to generate valid ID from config name. Please provide an ID manually."] };
+  }
+  const id = validInput.id || generatedId;
 
   // Check for duplicate ID
   if (configExists(id)) {
