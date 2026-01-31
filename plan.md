@@ -48,7 +48,7 @@ A web-based educational game inspired by the classic "Guess Who" board game, but
 - Players rejoin using the same game code and player name
 
 #### Game Room Lifecycle
-All game rooms expire after **5 minutes** in these scenarios:
+All game rooms expire after **20 minutes** in these scenarios:
 - Room created but second player never joins
 - Game completed (room persists briefly for rematch option)
 - Both players disconnect
@@ -927,7 +927,7 @@ Configure on GitHub repository settings:
 | Grid Arrangement | Same words, same positions for both players |
 | Mobile Support | Future enhancement (not MVP) |
 | Reconnection | Players can rejoin with same game code |
-| Room Expiration | 5 minutes max in all scenarios |
+| Room Expiration | 20 minutes max in all scenarios |
 | Config Visibility | Public (view-only, no cross-editing) |
 | Art Style | Playful, kid-friendly with bright colors |
 | Player Count | 2 players (MVP), Team mode (future) |

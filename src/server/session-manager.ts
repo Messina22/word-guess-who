@@ -27,6 +27,7 @@ import {
   getPlayerSecretWord,
   generateGameCode,
   selectSecretWord,
+  SESSION_TIMEOUT_MS,
 } from "./game-engine";
 import { getConfig } from "./config-manager";
 
@@ -139,7 +140,7 @@ class SessionManager {
     room.sockets.set(player.id, ws);
 
     // Extend session when player joins
-    extendSession(room.session, 5);
+    extendSession(room.session);
     this.scheduleExpiration(gameCode);
 
     // Check if this is a reconnect (player was already in the game)
@@ -209,7 +210,7 @@ class SessionManager {
 
     // If all players disconnected, schedule cleanup
     if (allPlayersDisconnected(room.session)) {
-      this.scheduleExpiration(gameCode, 5 * 60 * 1000); // 5 minutes
+      this.scheduleExpiration(gameCode, SESSION_TIMEOUT_MS);
     }
   }
 
@@ -234,6 +235,9 @@ class SessionManager {
       this.sendError(ws, "Game not found");
       return;
     }
+
+    extendSession(room.session);
+    this.scheduleExpiration(gameCode);
 
     switch (message.type) {
       case "flip_card":
@@ -370,7 +374,7 @@ class SessionManager {
       });
 
       // Schedule room cleanup after game over
-      this.scheduleExpiration(room.session.code, 5 * 60 * 1000); // 5 minutes
+      this.scheduleExpiration(room.session.code, SESSION_TIMEOUT_MS);
     }
   }
 
