@@ -87,7 +87,7 @@ export function QuestionPanel() {
     );
   }
 
-  if (!isMyTurn) {
+  if (!isMyTurn && !isLocalMode) {
     return (
       <div className="paper-card p-4 sm:p-6">
         <div className="flex items-center gap-2 text-pencil">
