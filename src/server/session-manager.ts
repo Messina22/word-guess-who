@@ -54,6 +54,7 @@ class SessionManager {
     isLocalMode: boolean = false,
     showOnlyLastQuestion: boolean = false,
     randomSecretWords: boolean = false,
+    sharedComputerMode: boolean = false,
   ): Promise<GameSession | { error: string }> {
     const config = getConfig(configId);
     if (!config) {
@@ -78,6 +79,7 @@ class SessionManager {
       isLocalMode,
       showOnlyLastQuestion,
       randomSecretWords,
+      sharedComputerMode,
     );
     session.code = gameCode; // Use the verified unique code
 
@@ -142,6 +144,19 @@ class SessionManager {
 
     // Check if this is a reconnect (player was already in the game)
     const isReconnect = existingPlayerId && existingPlayerId === player.id;
+
+    // In shared computer mode, automatically add a second player when the first player joins
+    if (room.session.sharedComputerMode && room.session.players.length === 1 && !isReconnect) {
+      const player2Name = `${playerName}'s Opponent`;
+      const result2 = addPlayer(room.session, player2Name);
+      
+      if (!("error" in result2)) {
+        // Game phase will have transitioned to "selecting" or "playing" after second player added
+        // Send updated game state to the first player with both players present
+        this.sendGameState(ws, room.session, playerIndex);
+        return;
+      }
+    }
 
     // Send full game state to the joining player
     this.sendGameState(ws, room.session, playerIndex);
@@ -238,7 +253,11 @@ class SessionManager {
         break;
 
       case "select_secret_word":
-        this.handleSelectSecretWord(room, playerId, message.cardIndex);
+        this.handleSelectSecretWord(room, playerId, message.cardIndex, message.forPlayerIndex);
+        break;
+
+      case "end_turn":
+        this.handleEndTurn(ws, room, playerId);
         break;
 
       case "leave_game":
@@ -250,7 +269,15 @@ class SessionManager {
 
   /** Handle card flip */
   private handleFlipCard(room: GameRoom, playerId: string, cardIndex: number): void {
-    const result = flipCard(room.session, playerId, cardIndex);
+    // In shared computer mode, flip card for whoever's turn it currently is
+    // (the player viewing the board is the one who should own the flip)
+    let effectivePlayerId = playerId;
+    if (room.session.sharedComputerMode && room.session.gameState) {
+      const currentTurnPlayerIndex = room.session.gameState.currentTurn;
+      effectivePlayerId = room.session.players[currentTurnPlayerIndex]?.id ?? playerId;
+    }
+
+    const result = flipCard(room.session, effectivePlayerId, cardIndex);
 
     if (!result.success) {
       const socket = room.sockets.get(playerId);
@@ -304,7 +331,14 @@ class SessionManager {
 
   /** Handle making a guess */
   private handleMakeGuess(room: GameRoom, playerId: string, word: string): void {
-    const result = makeGuess(room.session, playerId, word);
+    // In shared computer mode, make guess for whoever's turn it currently is
+    let effectivePlayerId = playerId;
+    if (room.session.sharedComputerMode && room.session.gameState) {
+      const currentTurnPlayerIndex = room.session.gameState.currentTurn;
+      effectivePlayerId = room.session.players[currentTurnPlayerIndex]?.id ?? playerId;
+    }
+
+    const result = makeGuess(room.session, effectivePlayerId, word);
 
     if (!result.success) {
       const socket = room.sockets.get(playerId);
@@ -341,8 +375,13 @@ class SessionManager {
   }
 
   /** Handle secret word selection */
-  private handleSelectSecretWord(room: GameRoom, playerId: string, cardIndex: number): void {
-    const result = selectSecretWord(room.session, playerId, cardIndex);
+  private handleSelectSecretWord(
+    room: GameRoom,
+    playerId: string,
+    cardIndex: number,
+    forPlayerIndex?: number
+  ): void {
+    const result = selectSecretWord(room.session, playerId, cardIndex, forPlayerIndex);
 
     if (!result.success) {
       const socket = room.sockets.get(playerId);
@@ -350,27 +389,80 @@ class SessionManager {
       return;
     }
 
-    // Send updated game state to the selecting player
+    // Send updated game state to the selecting socket (player 0's socket in shared mode)
     const selectingSocket = room.sockets.get(playerId);
     if (selectingSocket) {
-      this.sendGameState(selectingSocket, room.session, result.playerIndex);
+      // In shared computer mode, always show as player 0's perspective
+      // (since that's the only connected socket)
+      const viewAsPlayerIndex = room.session.sharedComputerMode ? 0 : result.playerIndex;
+      this.sendGameState(selectingSocket, room.session, viewAsPlayerIndex);
     }
 
     // Notify opponent that this player has selected (without revealing which word)
-    this.broadcastToOthers(room, playerId, {
-      type: "word_selected",
-      playerIndex: result.playerIndex,
-    });
+    // In shared computer mode, no need to broadcast since there's only one socket
+    if (!room.session.sharedComputerMode) {
+      this.broadcastToOthers(room, playerId, {
+        type: "word_selected",
+        playerIndex: result.playerIndex,
+      });
+    }
 
-    // If both players have selected, send full game state to both
+    // If both players have selected, send full game state
     if (result.bothSelected) {
-      for (let i = 0; i < room.session.players.length; i++) {
-        const player = room.session.players[i];
-        const socket = room.sockets.get(player.id);
-        if (socket) {
-          this.sendGameState(socket, room.session, i);
+      if (room.session.sharedComputerMode) {
+        // In shared computer mode, just send state to the only socket
+        if (selectingSocket) {
+          this.sendGameState(selectingSocket, room.session, 0);
+        }
+      } else {
+        // Normal mode: send to both players
+        for (let i = 0; i < room.session.players.length; i++) {
+          const player = room.session.players[i];
+          const socket = room.sockets.get(player.id);
+          if (socket) {
+            this.sendGameState(socket, room.session, i);
+          }
         }
       }
+    }
+  }
+
+  /** Handle ending turn (used in shared computer mode to pass the device) */
+  private handleEndTurn(
+    ws: ServerWebSocket<WebSocketData>,
+    room: GameRoom,
+    playerId: string
+  ): void {
+    // In shared computer mode, end turn for whoever's turn it currently is
+    // (since the socket always belongs to player 1, but we act on behalf of current player)
+    let effectivePlayerId = playerId;
+    if (room.session.sharedComputerMode && room.session.gameState) {
+      const currentTurnPlayerIndex = room.session.gameState.currentTurn;
+      effectivePlayerId = room.session.players[currentTurnPlayerIndex]?.id ?? playerId;
+    }
+
+    const result = endTurn(room.session, effectivePlayerId);
+
+    if (!result.success) {
+      this.sendError(ws, result.error);
+      return;
+    }
+
+    // In shared computer mode, send game state from the new player's perspective
+    if (room.session.sharedComputerMode) {
+      // Send turn_ended message first so client knows to switch
+      this.send(ws, {
+        type: "turn_ended",
+        nextPlayerIndex: result.nextTurn,
+      });
+      // Then send the full game state from the new player's perspective
+      this.sendGameState(ws, room.session, result.nextTurn);
+    } else {
+      // In normal mode, broadcast turn_ended to all players
+      this.broadcast(room, {
+        type: "turn_ended",
+        nextPlayerIndex: result.nextTurn,
+      });
     }
   }
 
@@ -394,6 +486,7 @@ class SessionManager {
         isLocalMode: session.isLocalMode,
         showOnlyLastQuestion: session.showOnlyLastQuestion,
         randomSecretWords: session.randomSecretWords,
+        sharedComputerMode: session.sharedComputerMode,
         phase: session.phase,
         players: session.players.map((p) => ({
           id: p.id,

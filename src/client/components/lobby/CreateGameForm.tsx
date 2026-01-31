@@ -11,6 +11,7 @@ export function CreateGameForm() {
   const [isLocalMode, setIsLocalMode] = useState(false);
   const [showOnlyLastQuestion, setShowOnlyLastQuestion] = useState(false);
   const [randomSecretWords, setRandomSecretWords] = useState(false);
+  const [sharedComputerMode, setSharedComputerMode] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -37,6 +38,7 @@ export function CreateGameForm() {
       isLocalMode,
       showOnlyLastQuestion,
       randomSecretWords,
+      sharedComputerMode,
     });
 
     if (response.success && response.data) {
@@ -122,7 +124,7 @@ export function CreateGameForm() {
         </label>
       </div>
 
-      <div className="mb-6">
+      <div className="mb-4">
         <label className="flex items-center gap-3 cursor-pointer">
           <input
             type="checkbox"
@@ -134,6 +136,23 @@ export function CreateGameForm() {
             <span className="font-ui text-sm text-pencil">Random Secret Words</span>
             <p className="font-ui text-xs text-pencil/60">
               Automatically assign secret words (otherwise players choose)
+            </p>
+          </div>
+        </label>
+      </div>
+
+      <div className="mb-6">
+        <label className="flex items-center gap-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={sharedComputerMode}
+            onChange={(e) => setSharedComputerMode(e.target.checked)}
+            className="w-5 h-5 rounded border-pencil/30 text-crayon-blue focus:ring-crayon-blue"
+          />
+          <div>
+            <span className="font-ui text-sm text-pencil">Shared Computer Mode</span>
+            <p className="font-ui text-xs text-pencil/60">
+              Both players share one computer and pass it between turns
             </p>
           </div>
         </label>

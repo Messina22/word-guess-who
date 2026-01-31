@@ -69,6 +69,7 @@ export function createGameSession(
   isLocalMode: boolean = false,
   showOnlyLastQuestion: boolean = false,
   randomSecretWords: boolean = false,
+  sharedComputerMode: boolean = false,
 ): GameSession {
   const now = new Date();
   const expiresAt = new Date(now.getTime() + 5 * 60 * 1000); // 5 minutes
@@ -81,6 +82,7 @@ export function createGameSession(
     isLocalMode,
     showOnlyLastQuestion,
     randomSecretWords,
+    sharedComputerMode,
     phase: "waiting",
     players: [],
     gameState: {
@@ -406,21 +408,34 @@ export function selectSecretWord(
   session: GameSession,
   playerId: string,
   cardIndex: number,
+  forPlayerIndex?: number,
 ):
   | { success: true; playerIndex: number; bothSelected: boolean }
   | { success: false; error: string } {
-  const playerIndex = session.players.findIndex((p) => p.id === playerId);
-  if (playerIndex === -1) {
-    return { success: false, error: "Player not found" };
+  // In shared computer mode, forPlayerIndex can be used to select on behalf of another player
+  let targetPlayerIndex: number;
+
+  if (forPlayerIndex !== undefined && session.sharedComputerMode) {
+    // Validate the forPlayerIndex
+    if (forPlayerIndex < 0 || forPlayerIndex >= session.players.length) {
+      return { success: false, error: "Invalid player index" };
+    }
+    targetPlayerIndex = forPlayerIndex;
+  } else {
+    // Normal mode: find player by their ID
+    targetPlayerIndex = session.players.findIndex((p) => p.id === playerId);
+    if (targetPlayerIndex === -1) {
+      return { success: false, error: "Player not found" };
+    }
   }
 
   if (session.phase !== "selecting") {
     return { success: false, error: "Game is not in selecting phase" };
   }
 
-  const player = session.players[playerIndex];
+  const player = session.players[targetPlayerIndex];
   if (player.hasSelectedWord) {
-    return { success: false, error: "You have already selected a word" };
+    return { success: false, error: "This player has already selected a word" };
   }
 
   if (!session.gameState) {
@@ -432,11 +447,11 @@ export function selectSecretWord(
     return { success: false, error: "Invalid card index" };
   }
 
-  // Check if opponent already selected this word
-  const opponentIndex = playerIndex === 0 ? 1 : 0;
-  const opponent = session.players[opponentIndex];
-  if (opponent && opponent.secretWordIndex === cardIndex) {
-    return { success: false, error: "This word is already taken by your opponent" };
+  // Check if the other player already selected this word
+  const otherPlayerIndex = targetPlayerIndex === 0 ? 1 : 0;
+  const otherPlayer = session.players[otherPlayerIndex];
+  if (otherPlayer && otherPlayer.secretWordIndex === cardIndex) {
+    return { success: false, error: "This word is already taken by the other player" };
   }
 
   // Assign the word
@@ -449,7 +464,7 @@ export function selectSecretWord(
     session.phase = "playing";
   }
 
-  return { success: true, playerIndex, bothSelected };
+  return { success: true, playerIndex: targetPlayerIndex, bothSelected };
 }
 
 /** Get the secret word for a player */

@@ -13,8 +13,9 @@ export function QuestionPanel() {
     lastGuess,
     lastAnswer,
     playerIndex,
+    sharedComputerMode,
   } = useGameState();
-  const { askQuestion, answerQuestion, makeGuess } = useGameActions();
+  const { askQuestion, answerQuestion, makeGuess, endTurn } = useGameActions();
 
   const [question, setQuestion] = useState("");
   const [guessWord, setGuessWord] = useState("");
@@ -120,13 +121,21 @@ export function QuestionPanel() {
     );
   }
 
-  // Local mode: only show guess form (questions asked in person)
-  if (isLocalMode) {
+  // Local mode or shared computer mode: only show guess form (questions asked in person)
+  if (isLocalMode || sharedComputerMode) {
     return (
       <div className="paper-card p-4 sm:p-6">
         <div className="mb-4 p-3 bg-sunshine/20 rounded-lg">
           <p className="text-sm text-pencil">
-            <strong>Local Mode:</strong> Ask questions in person, then submit your guess to win!
+            {sharedComputerMode ? (
+              <>
+                <strong>1 Computer Mode:</strong> Ask questions in person, then make a guess or end your turn!
+              </>
+            ) : (
+              <>
+                <strong>Local Mode:</strong> Ask questions in person, then make a guess or end your turn!
+              </>
+            )}
           </p>
         </div>
 
@@ -156,6 +165,21 @@ export function QuestionPanel() {
             Warning: Wrong guesses end your turn!
           </p>
         </form>
+
+        <div className="mt-4 pt-4 border-t border-kraft">
+          <button
+            onClick={endTurn}
+            className="btn-secondary w-full"
+          >
+            {sharedComputerMode ? "End Turn & Pass Device" : "End Turn"}
+          </button>
+          <p className="text-xs text-pencil/60 mt-2 text-center">
+            {sharedComputerMode 
+              ? `Pass the device to ${opponent?.name || "your opponent"} for their turn`
+              : `Pass the turn to ${opponent?.name || "your opponent"}`
+            }
+          </p>
+        </div>
 
         {lastGuess && lastGuess.playerIndex === playerIndex && (
           <div

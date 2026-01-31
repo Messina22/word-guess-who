@@ -127,6 +127,8 @@ export interface GameSession {
   showOnlyLastQuestion: boolean;
   /** Whether secret words are randomly assigned (true) or player-selected (false) */
   randomSecretWords: boolean;
+  /** Whether both players share one computer and must pass it between turns */
+  sharedComputerMode: boolean;
   /** Current phase of the game */
   phase: GamePhase;
   /** Players in the session (max 2) */
@@ -149,6 +151,8 @@ export interface PublicGameSession {
   showOnlyLastQuestion: boolean;
   /** Whether secret words are randomly assigned (true) or player-selected (false) */
   randomSecretWords: boolean;
+  /** Whether both players share one computer and must pass it between turns */
+  sharedComputerMode: boolean;
   phase: GamePhase;
   players: Array<{ id: string; name: string; connected: boolean }>;
   createdAt: string;
@@ -166,7 +170,8 @@ export type ClientMessageType =
   | "answer_question"
   | "make_guess"
   | "leave_game"
-  | "select_secret_word";
+  | "select_secret_word"
+  | "end_turn";
 
 /** Server → Client message types */
 export type ServerMessageType =
@@ -181,7 +186,8 @@ export type ServerMessageType =
   | "guess_made"
   | "game_over"
   | "game_expired"
-  | "word_selected";
+  | "word_selected"
+  | "turn_ended";
 
 /** Base client message */
 interface ClientMessageBase {
@@ -230,6 +236,13 @@ export interface LeaveGameMessage extends ClientMessageBase {
 export interface SelectSecretWordMessage extends ClientMessageBase {
   type: "select_secret_word";
   cardIndex: number;
+  /** In shared computer mode, allows selecting on behalf of another player */
+  forPlayerIndex?: number;
+}
+
+/** End turn without guessing (used in shared computer mode to pass the device) */
+export interface EndTurnMessage extends ClientMessageBase {
+  type: "end_turn";
 }
 
 /** Union of all client messages */
@@ -240,7 +253,8 @@ export type ClientMessage =
   | AnswerQuestionMessage
   | MakeGuessMessage
   | LeaveGameMessage
-  | SelectSecretWordMessage;
+  | SelectSecretWordMessage
+  | EndTurnMessage;
 
 /** Base server message */
 interface ServerMessageBase {
@@ -349,6 +363,13 @@ export interface WordSelectedMessage extends ServerMessageBase {
   playerIndex: number;
 }
 
+/** Turn ended (used in shared computer mode to signal view switch) */
+export interface TurnEndedMessage extends ServerMessageBase {
+  type: "turn_ended";
+  /** The player whose turn it now is */
+  nextPlayerIndex: number;
+}
+
 /** Union of all server messages */
 export type ServerMessage =
   | ErrorMessage
@@ -362,7 +383,8 @@ export type ServerMessage =
   | GuessMadeMessage
   | GameOverMessage
   | GameExpiredMessage
-  | WordSelectedMessage;
+  | WordSelectedMessage
+  | TurnEndedMessage;
 
 // ============================================
 // API Types for Game Sessions
@@ -377,6 +399,8 @@ export interface CreateGameInput {
   showOnlyLastQuestion?: boolean;
   /** Automatically assign random secret words (otherwise players choose) */
   randomSecretWords?: boolean;
+  /** Both players share one computer and must pass it between turns */
+  sharedComputerMode?: boolean;
 }
 
 /** Response when creating a game */

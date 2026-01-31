@@ -32,6 +32,7 @@ export async function handleCreateGame(request: Request): Promise<Response> {
       body.isLocalMode ?? false,
       body.showOnlyLastQuestion ?? false,
       body.randomSecretWords ?? false,
+      body.sharedComputerMode ?? false,
     );
 
     if ("error" in result) {
@@ -64,6 +65,7 @@ export function handleGetGame(code: string): Response {
     isLocalMode: session.isLocalMode,
     showOnlyLastQuestion: session.showOnlyLastQuestion,
     randomSecretWords: session.randomSecretWords,
+    sharedComputerMode: session.sharedComputerMode,
     phase: session.phase,
     players: session.players.map((p) => ({
       id: p.id,
