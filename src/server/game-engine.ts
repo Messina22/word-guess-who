@@ -328,8 +328,8 @@ export function makeGuess(
     return { success: false, error: "Game is not in progress" };
   }
 
-  // Check if it's this player's turn
-  if (session.gameState.currentTurn !== playerIndex) {
+  // Check if it's this player's turn (local mode allows guessing any time)
+  if (!session.isLocalMode && session.gameState.currentTurn !== playerIndex) {
     return { success: false, error: "Not your turn" };
   }
 
