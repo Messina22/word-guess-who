@@ -1,50 +1,27 @@
-import { useState, useEffect, type Dispatch, type SetStateAction } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "@client/lib/api";
 import type { GameConfig } from "@shared/types";
 
-type ToggleKey =
-  | "isLocalMode"
-  | "showOnlyLastQuestion"
-  | "randomSecretWords"
-  | "sharedComputerMode";
-
-type ToggleState = Record<ToggleKey, boolean>;
-
-const toggleDependencies: Partial<
-  Record<ToggleKey, { disabledWhen: (state: ToggleState) => boolean; reason: string }>
-> = {
-  showOnlyLastQuestion: {
-    disabledWhen: (state) => state.isLocalMode || state.sharedComputerMode,
-    reason: "Unavailable in local or shared computer mode.",
-  },
-};
+type GameMode = "online" | "local" | "shared";
 
 export function CreateGameForm() {
   const navigate = useNavigate();
   const [configs, setConfigs] = useState<GameConfig[]>([]);
   const [selectedConfig, setSelectedConfig] = useState("");
   const [playerName, setPlayerName] = useState("");
-  const [isLocalMode, setIsLocalMode] = useState(false);
+  const [gameMode, setGameMode] = useState<GameMode>("online");
   const [showOnlyLastQuestion, setShowOnlyLastQuestion] = useState(false);
   const [randomSecretWords, setRandomSecretWords] = useState(false);
-  const [sharedComputerMode, setSharedComputerMode] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const toggleState: ToggleState = {
-    isLocalMode,
-    showOnlyLastQuestion,
-    randomSecretWords,
-    sharedComputerMode,
-  };
+  // Derive API flags from gameMode
+  const isLocalMode = gameMode === "local";
+  const sharedComputerMode = gameMode === "shared";
 
-  const toggleSetters: Record<ToggleKey, Dispatch<SetStateAction<boolean>>> = {
-    isLocalMode: setIsLocalMode,
-    showOnlyLastQuestion: setShowOnlyLastQuestion,
-    randomSecretWords: setRandomSecretWords,
-    sharedComputerMode: setSharedComputerMode,
-  };
+  // Show Only Last Question is disabled for local game modes
+  const showOnlyLastQuestionDisabled = gameMode !== "online";
 
   useEffect(() => {
     api.configs.list().then((response) => {
@@ -57,23 +34,12 @@ export function CreateGameForm() {
     });
   }, []);
 
-  const isToggleDisabled = (key: ToggleKey) => {
-    const rule = toggleDependencies[key];
-    return rule ? rule.disabledWhen(toggleState) : false;
-  };
-
-  const getToggleReason = (key: ToggleKey) => toggleDependencies[key]?.reason;
-
+  // Reset showOnlyLastQuestion when switching to a local mode
   useEffect(() => {
-    (Object.keys(toggleDependencies) as ToggleKey[]).forEach((key) => {
-      if (isToggleDisabled(key) && toggleState[key]) {
-        toggleSetters[key](false);
-      }
-    });
-  }, [isLocalMode, showOnlyLastQuestion, randomSecretWords, sharedComputerMode]);
-
-  const showOnlyLastQuestionDisabled = isToggleDisabled("showOnlyLastQuestion");
-  const showOnlyLastQuestionReason = getToggleReason("showOnlyLastQuestion");
+    if (showOnlyLastQuestionDisabled && showOnlyLastQuestion) {
+      setShowOnlyLastQuestion(false);
+    }
+  }, [gameMode, showOnlyLastQuestionDisabled, showOnlyLastQuestion]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -139,79 +105,108 @@ export function CreateGameForm() {
         </select>
       </div>
 
-      <div className="mb-4">
-        <label className="flex items-center gap-3 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={isLocalMode}
-            onChange={(e) => setIsLocalMode(e.target.checked)}
-            className="w-5 h-5 rounded border-pencil/30 text-crayon-blue focus:ring-crayon-blue"
-          />
-          <div>
-            <span className="font-ui text-sm text-pencil">Local 2-Player Mode</span>
-            <p className="font-ui text-xs text-pencil/60">
-              Ask questions in person - only submit word guesses
-            </p>
-          </div>
-        </label>
-      </div>
+      {/* Game Mode Section */}
+      <fieldset className="mb-4">
+        <legend className="block font-ui text-sm text-pencil/70 mb-2">
+          Game Mode
+        </legend>
+        <div className="space-y-3 pl-1">
+          <label className="flex items-center gap-3 cursor-pointer">
+            <input
+              type="radio"
+              name="gameMode"
+              value="online"
+              checked={gameMode === "online"}
+              onChange={() => setGameMode("online")}
+              className="w-5 h-5 border-pencil/30 text-crayon-blue focus:ring-crayon-blue"
+            />
+            <div>
+              <span className="font-ui text-sm text-pencil">Online Mode</span>
+              <p className="font-ui text-xs text-pencil/60">
+                Play online with another player on their own device
+              </p>
+            </div>
+          </label>
 
-      <div className="mb-4">
-        <label
-          className={`flex items-center gap-3 ${
-            showOnlyLastQuestionDisabled ? "cursor-not-allowed opacity-60" : "cursor-pointer"
-          }`}
-          title={showOnlyLastQuestionDisabled ? showOnlyLastQuestionReason : undefined}
-        >
-          <input
-            type="checkbox"
-            checked={showOnlyLastQuestion}
-            onChange={(e) => setShowOnlyLastQuestion(e.target.checked)}
-            disabled={showOnlyLastQuestionDisabled}
-            className="w-5 h-5 rounded border-pencil/30 text-crayon-blue focus:ring-crayon-blue disabled:cursor-not-allowed disabled:opacity-50"
-          />
-          <div>
-            <span className="font-ui text-sm text-pencil">Show Only Last Question</span>
-            <p className="font-ui text-xs text-pencil/60">
-              Only display the most recent question in the log
-            </p>
-          </div>
-        </label>
-      </div>
+          <label className="flex items-center gap-3 cursor-pointer">
+            <input
+              type="radio"
+              name="gameMode"
+              value="local"
+              checked={gameMode === "local"}
+              onChange={() => setGameMode("local")}
+              className="w-5 h-5 border-pencil/30 text-crayon-blue focus:ring-crayon-blue"
+            />
+            <div>
+              <span className="font-ui text-sm text-pencil">Local 2-Player Mode</span>
+              <p className="font-ui text-xs text-pencil/60">
+                Ask questions in person - only submit word guesses
+              </p>
+            </div>
+          </label>
 
-      <div className="mb-4">
-        <label className="flex items-center gap-3 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={randomSecretWords}
-            onChange={(e) => setRandomSecretWords(e.target.checked)}
-            className="w-5 h-5 rounded border-pencil/30 text-crayon-blue focus:ring-crayon-blue"
-          />
-          <div>
-            <span className="font-ui text-sm text-pencil">Random Secret Words</span>
-            <p className="font-ui text-xs text-pencil/60">
-              Automatically assign secret words (otherwise players choose)
-            </p>
-          </div>
-        </label>
-      </div>
+          <label className="flex items-center gap-3 cursor-pointer">
+            <input
+              type="radio"
+              name="gameMode"
+              value="shared"
+              checked={gameMode === "shared"}
+              onChange={() => setGameMode("shared")}
+              className="w-5 h-5 border-pencil/30 text-crayon-blue focus:ring-crayon-blue"
+            />
+            <div>
+              <span className="font-ui text-sm text-pencil">Shared Computer Mode</span>
+              <p className="font-ui text-xs text-pencil/60">
+                Both players share one computer and pass it between turns
+              </p>
+            </div>
+          </label>
+        </div>
+      </fieldset>
 
-      <div className="mb-6">
-        <label className="flex items-center gap-3 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={sharedComputerMode}
-            onChange={(e) => setSharedComputerMode(e.target.checked)}
-            className="w-5 h-5 rounded border-pencil/30 text-crayon-blue focus:ring-crayon-blue"
-          />
-          <div>
-            <span className="font-ui text-sm text-pencil">Shared Computer Mode</span>
-            <p className="font-ui text-xs text-pencil/60">
-              Both players share one computer and pass it between turns
-            </p>
-          </div>
-        </label>
-      </div>
+      {/* Additional Settings Section */}
+      <fieldset className="mb-6">
+        <legend className="block font-ui text-sm text-pencil/70 mb-2">
+          Additional Settings
+        </legend>
+        <div className="space-y-3 pl-1">
+          <label className="flex items-center gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={randomSecretWords}
+              onChange={(e) => setRandomSecretWords(e.target.checked)}
+              className="w-5 h-5 rounded border-pencil/30 text-crayon-blue focus:ring-crayon-blue"
+            />
+            <div>
+              <span className="font-ui text-sm text-pencil">Random Secret Words</span>
+              <p className="font-ui text-xs text-pencil/60">
+                Automatically assign secret words (otherwise players choose)
+              </p>
+            </div>
+          </label>
+
+          <label
+            className={`flex items-center gap-3 ${
+              showOnlyLastQuestionDisabled ? "cursor-not-allowed opacity-60" : "cursor-pointer"
+            }`}
+            title={showOnlyLastQuestionDisabled ? "Unavailable in local or shared computer mode" : undefined}
+          >
+            <input
+              type="checkbox"
+              checked={showOnlyLastQuestion}
+              onChange={(e) => setShowOnlyLastQuestion(e.target.checked)}
+              disabled={showOnlyLastQuestionDisabled}
+              className="w-5 h-5 rounded border-pencil/30 text-crayon-blue focus:ring-crayon-blue disabled:cursor-not-allowed disabled:opacity-50"
+            />
+            <div>
+              <span className="font-ui text-sm text-pencil">Show Only Last Question</span>
+              <p className="font-ui text-xs text-pencil/60">
+                Only display the most recent question in the log
+              </p>
+            </div>
+          </label>
+        </div>
+      </fieldset>
 
       {error && (
         <div className="mb-4 p-3 bg-paper-red/10 text-paper-red rounded-lg text-sm">
