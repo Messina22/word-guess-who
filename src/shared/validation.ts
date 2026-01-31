@@ -67,8 +67,8 @@ const configIdSchema = z
     "ID must be lowercase alphanumeric with hyphens (e.g., 'my-config-v1')"
   );
 
-/** Schema for game config input (creation/update) */
-export const gameConfigInputSchema = z.object({
+/** Base schema for game config input (without refinements) */
+const gameConfigInputBaseSchema = z.object({
   id: configIdSchema.optional(),
   name: z
     .string()
@@ -87,12 +87,27 @@ export const gameConfigInputSchema = z.object({
   settings: gameSettingsSchema,
 });
 
+/** Schema for game config input (creation/update) */
+export const gameConfigInputSchema = gameConfigInputBaseSchema.refine(
+  (data) => data.settings.gridSize <= data.wordBank.length,
+  {
+    message: "Grid size cannot exceed the number of words in the word bank",
+    path: ["settings", "gridSize"],
+  }
+);
+
 /** Schema for a complete game config (with auto-generated fields) */
-export const gameConfigSchema = gameConfigInputSchema.extend({
+export const gameConfigSchema = gameConfigInputBaseSchema.extend({
   id: configIdSchema,
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
-});
+}).refine(
+  (data) => data.settings.gridSize <= data.wordBank.length,
+  {
+    message: "Grid size cannot exceed the number of words in the word bank",
+    path: ["settings", "gridSize"],
+  }
+);
 
 /** Validate game config input and return typed result */
 export function validateGameConfigInput(data: unknown): {
