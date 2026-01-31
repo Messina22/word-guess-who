@@ -1,7 +1,24 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, type Dispatch, type SetStateAction } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "@client/lib/api";
 import type { GameConfig } from "@shared/types";
+
+type ToggleKey =
+  | "isLocalMode"
+  | "showOnlyLastQuestion"
+  | "randomSecretWords"
+  | "sharedComputerMode";
+
+type ToggleState = Record<ToggleKey, boolean>;
+
+const toggleDependencies: Partial<
+  Record<ToggleKey, { disabledWhen: (state: ToggleState) => boolean; reason: string }>
+> = {
+  showOnlyLastQuestion: {
+    disabledWhen: (state) => state.isLocalMode || state.sharedComputerMode,
+    reason: "Unavailable in local or shared computer mode.",
+  },
+};
 
 export function CreateGameForm() {
   const navigate = useNavigate();
@@ -15,6 +32,20 @@ export function CreateGameForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const toggleState: ToggleState = {
+    isLocalMode,
+    showOnlyLastQuestion,
+    randomSecretWords,
+    sharedComputerMode,
+  };
+
+  const toggleSetters: Record<ToggleKey, Dispatch<SetStateAction<boolean>>> = {
+    isLocalMode: setIsLocalMode,
+    showOnlyLastQuestion: setShowOnlyLastQuestion,
+    randomSecretWords: setRandomSecretWords,
+    sharedComputerMode: setSharedComputerMode,
+  };
+
   useEffect(() => {
     api.configs.list().then((response) => {
       if (response.success && response.data) {
@@ -26,6 +57,24 @@ export function CreateGameForm() {
     });
   }, []);
 
+  const isToggleDisabled = (key: ToggleKey) => {
+    const rule = toggleDependencies[key];
+    return rule ? rule.disabledWhen(toggleState) : false;
+  };
+
+  const getToggleReason = (key: ToggleKey) => toggleDependencies[key]?.reason;
+
+  useEffect(() => {
+    (Object.keys(toggleDependencies) as ToggleKey[]).forEach((key) => {
+      if (isToggleDisabled(key) && toggleState[key]) {
+        toggleSetters[key](false);
+      }
+    });
+  }, [isLocalMode, showOnlyLastQuestion, randomSecretWords, sharedComputerMode]);
+
+  const showOnlyLastQuestionDisabled = isToggleDisabled("showOnlyLastQuestion");
+  const showOnlyLastQuestionReason = getToggleReason("showOnlyLastQuestion");
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedConfig || !playerName.trim()) return;
@@ -36,7 +85,7 @@ export function CreateGameForm() {
     const response = await api.games.create({
       configId: selectedConfig,
       isLocalMode,
-      showOnlyLastQuestion,
+      showOnlyLastQuestion: showOnlyLastQuestionDisabled ? false : showOnlyLastQuestion,
       randomSecretWords,
       sharedComputerMode,
     });
@@ -108,12 +157,18 @@ export function CreateGameForm() {
       </div>
 
       <div className="mb-4">
-        <label className="flex items-center gap-3 cursor-pointer">
+        <label
+          className={`flex items-center gap-3 ${
+            showOnlyLastQuestionDisabled ? "cursor-not-allowed opacity-60" : "cursor-pointer"
+          }`}
+          title={showOnlyLastQuestionDisabled ? showOnlyLastQuestionReason : undefined}
+        >
           <input
             type="checkbox"
             checked={showOnlyLastQuestion}
             onChange={(e) => setShowOnlyLastQuestion(e.target.checked)}
-            className="w-5 h-5 rounded border-pencil/30 text-crayon-blue focus:ring-crayon-blue"
+            disabled={showOnlyLastQuestionDisabled}
+            className="w-5 h-5 rounded border-pencil/30 text-crayon-blue focus:ring-crayon-blue disabled:cursor-not-allowed disabled:opacity-50"
           />
           <div>
             <span className="font-ui text-sm text-pencil">Show Only Last Question</span>
