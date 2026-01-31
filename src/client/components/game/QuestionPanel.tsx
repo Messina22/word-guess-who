@@ -133,7 +133,7 @@ export function QuestionPanel() {
               </>
             ) : (
               <>
-                <strong>Local Mode:</strong> Ask questions in person, then submit your guess to win!
+                <strong>Local Mode:</strong> Ask questions in person, then make a guess or end your turn!
               </>
             )}
           </p>
@@ -166,19 +166,20 @@ export function QuestionPanel() {
           </p>
         </form>
 
-        {sharedComputerMode && (
-          <div className="mt-4 pt-4 border-t border-kraft">
-            <button
-              onClick={endTurn}
-              className="btn-secondary w-full"
-            >
-              End Turn & Pass Device
-            </button>
-            <p className="text-xs text-pencil/60 mt-2 text-center">
-              Pass the device to {opponent?.name || "your opponent"} for their turn
-            </p>
-          </div>
-        )}
+        <div className="mt-4 pt-4 border-t border-kraft">
+          <button
+            onClick={endTurn}
+            className="btn-secondary w-full"
+          >
+            {sharedComputerMode ? "End Turn & Pass Device" : "End Turn"}
+          </button>
+          <p className="text-xs text-pencil/60 mt-2 text-center">
+            {sharedComputerMode 
+              ? `Pass the device to ${opponent?.name || "your opponent"} for their turn`
+              : `Pass the turn to ${opponent?.name || "your opponent"}`
+            }
+          </p>
+        </div>
 
         {lastGuess && lastGuess.playerIndex === playerIndex && (
           <div
