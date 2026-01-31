@@ -176,7 +176,7 @@ async function handleRequest(request: Request, server: ReturnType<typeof Bun.ser
       return handleUpdateConfig(id, request);
     }
     if (method === "DELETE") {
-      return handleDeleteConfig(id);
+      return handleDeleteConfig(id, request);
     }
   }
 

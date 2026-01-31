@@ -9,6 +9,11 @@ import {
 
 const CONFIGS_DIR = join(import.meta.dir, "../../configs");
 
+/** Normalize author name for comparison (lowercase, trimmed) */
+function normalizeAuthor(value?: string): string {
+  return value?.trim().toLowerCase() ?? "";
+}
+
 /** Convert a database row to a GameConfig object */
 function rowToConfig(row: GameConfigRow): GameConfig {
   const config = JSON.parse(row.config_json);
@@ -115,6 +120,13 @@ export function updateConfig(
     return { success: false, errors: [`Config with ID '${id}' not found`] };
   }
 
+  // Verify ownership: requesting author must match existing author
+  const existingAuthor = normalizeAuthor(existing.author);
+  const requestingAuthor = normalizeAuthor(input.author);
+  if (existingAuthor !== "" && existingAuthor !== requestingAuthor) {
+    return { success: false, errors: ["You do not have permission to edit this configuration"] };
+  }
+
   // Validate input
   const validation = validateGameConfigInput(input);
   if (!validation.success) {
@@ -169,10 +181,26 @@ export function updateConfig(
 }
 
 /** Delete a game configuration */
-export function deleteConfig(id: string): boolean {
+export function deleteConfig(
+  id: string,
+  requestingAuthor?: string
+): { success: true } | { success: false; error: string } {
+  // Check if config exists and get author
+  const existing = getConfig(id);
+  if (!existing) {
+    return { success: false, error: `Config with ID '${id}' not found` };
+  }
+
+  // Verify ownership: requesting author must match existing author
+  const existingAuthor = normalizeAuthor(existing.author);
+  const normalizedRequestingAuthor = normalizeAuthor(requestingAuthor);
+  if (existingAuthor !== "" && existingAuthor !== normalizedRequestingAuthor) {
+    return { success: false, error: "You do not have permission to delete this configuration" };
+  }
+
   const db = getDb();
-  const result = db.run("DELETE FROM game_configs WHERE id = ?", [id]);
-  return result.changes > 0;
+  db.run("DELETE FROM game_configs WHERE id = ?", [id]);
+  return { success: true };
 }
 
 /** Load JSON config files from the configs directory into the database */
