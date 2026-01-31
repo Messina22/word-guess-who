@@ -20,6 +20,7 @@ export function useGameState() {
     questionHistory,
     hasSelectedWord,
     opponentHasSelected,
+    secretWordHidden,
   } = useGame();
 
   const isMyTurn = playerIndex !== null && currentTurn === playerIndex;
@@ -36,13 +37,8 @@ export function useGameState() {
   const mustAnswer = awaitingAnswer && !isMyTurn;
   const waitingForAnswer = awaitingAnswer && isMyTurn;
 
-  // Shared computer mode derived state
+  // Shared computer mode
   const sharedComputerMode = session?.sharedComputerMode ?? false;
-  const computerHolderIndex = session?.computerHolderIndex ?? null;
-  const computerBeingPassed = session?.computerBeingPassed ?? false;
-  const iHaveComputer = sharedComputerMode && computerHolderIndex === playerIndex;
-  const shouldShowPassScreen = sharedComputerMode && computerBeingPassed;
-  const canClaimComputer = shouldShowPassScreen && currentTurn === playerIndex;
 
   return {
     connected,
@@ -63,6 +59,7 @@ export function useGameState() {
     questionHistory,
     hasSelectedWord,
     opponentHasSelected,
+    secretWordHidden,
     isMyTurn,
     isPlaying,
     isWaiting,
@@ -76,10 +73,5 @@ export function useGameState() {
     waitingForAnswer,
     // Shared computer mode
     sharedComputerMode,
-    computerHolderIndex,
-    computerBeingPassed,
-    iHaveComputer,
-    shouldShowPassScreen,
-    canClaimComputer,
   };
 }

@@ -3,7 +3,7 @@ import { useGameState } from "@client/hooks/useGameState";
 import { useGameActions } from "@client/hooks/useGameActions";
 
 export function GameBoard() {
-  const { cards, myFlippedCards, opponentFlippedCards, mySecretWord, winner } =
+  const { cards, myFlippedCards, opponentFlippedCards, mySecretWord, winner, secretWordHidden } =
     useGameState();
   const { flipCard } = useGameActions();
 
@@ -31,7 +31,7 @@ export function GameBoard() {
             key={card.index}
             card={card}
             isFlipped={myFlippedCards.includes(card.index)}
-            isSecret={card.index === secretIndex}
+            isSecret={card.index === secretIndex && !secretWordHidden}
             isOpponentFlipped={opponentFlippedCards.includes(card.index)}
             onClick={() => flipCard(card.index)}
             disabled={winner !== null}

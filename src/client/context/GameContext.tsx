@@ -45,6 +45,8 @@ interface GameContextState {
   hasSelectedWord: boolean;
   /** Whether the opponent has selected their secret word (selecting phase) */
   opponentHasSelected: boolean;
+  /** Whether to hide the secret word indicator (for shared computer mode privacy) */
+  secretWordHidden: boolean;
 }
 
 type GameAction =
@@ -53,7 +55,8 @@ type GameAction =
   | { type: "SET_ERROR"; error: string }
   | { type: "CLEAR_ERROR" }
   | { type: "RESET" }
-  | { type: "HANDLE_MESSAGE"; message: ServerMessage };
+  | { type: "HANDLE_MESSAGE"; message: ServerMessage }
+  | { type: "SET_SECRET_WORD_HIDDEN"; hidden: boolean };
 
 const initialState: GameContextState = {
   connected: false,
@@ -74,6 +77,7 @@ const initialState: GameContextState = {
   questionHistory: [],
   hasSelectedWord: false,
   opponentHasSelected: false,
+  secretWordHidden: false,
 };
 
 function gameReducer(
@@ -95,6 +99,9 @@ function gameReducer(
 
     case "RESET":
       return { ...initialState, connected: state.connected };
+
+    case "SET_SECRET_WORD_HIDDEN":
+      return { ...state, secretWordHidden: action.hidden };
 
     case "HANDLE_MESSAGE": {
       const message = action.message;
@@ -122,6 +129,8 @@ function gameReducer(
             questionHistory: [],
             hasSelectedWord: message.hasSelectedWord ?? false,
             opponentHasSelected: message.opponentHasSelected ?? false,
+            // Auto-hide secret word in shared computer mode for privacy
+            secretWordHidden: message.session.sharedComputerMode ?? state.secretWordHidden,
           };
 
         case "player_joined":
@@ -258,30 +267,6 @@ function gameReducer(
             opponentHasSelected: true,
           };
 
-        case "computer_passed":
-          // Computer is being passed - update session state
-          if (!state.session) return state;
-          return {
-            ...state,
-            session: {
-              ...state.session,
-              computerHolderIndex: null,
-              computerBeingPassed: true,
-            },
-          };
-
-        case "computer_claimed":
-          // Computer was claimed
-          if (!state.session) return state;
-          return {
-            ...state,
-            session: {
-              ...state.session,
-              computerHolderIndex: message.byPlayerIndex,
-              computerBeingPassed: false,
-            },
-          };
-
         default:
           return state;
       }
@@ -301,9 +286,9 @@ interface GameContextValue extends GameContextState {
   answerQuestion: (answer: boolean) => void;
   makeGuess: (word: string) => void;
   leaveGame: () => void;
-  selectSecretWord: (cardIndex: number) => void;
-  passComputer: () => void;
-  claimComputer: () => void;
+  selectSecretWord: (cardIndex: number, forPlayerIndex?: number) => void;
+  /** Toggle visibility of the secret word indicator */
+  setSecretWordHidden: (hidden: boolean) => void;
   /** Ref set when join_game is sent; used to avoid double-join (e.g. Strict Mode remount) */
   joinedGameCodeRef: React.MutableRefObject<string | null>;
 }
@@ -389,19 +374,15 @@ export function GameProvider({ children }: { children: ReactNode }) {
   }, [send]);
 
   const selectSecretWord = useCallback(
-    (cardIndex: number) => {
-      send({ type: "select_secret_word", cardIndex });
+    (cardIndex: number, forPlayerIndex?: number) => {
+      send({ type: "select_secret_word", cardIndex, forPlayerIndex });
     },
     [send],
   );
 
-  const passComputer = useCallback(() => {
-    send({ type: "pass_computer" });
-  }, [send]);
-
-  const claimComputer = useCallback(() => {
-    send({ type: "claim_computer" });
-  }, [send]);
+  const setSecretWordHidden = useCallback((hidden: boolean) => {
+    dispatch({ type: "SET_SECRET_WORD_HIDDEN", hidden });
+  }, []);
 
   const value: GameContextValue = {
     ...state,
@@ -414,8 +395,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     makeGuess,
     leaveGame,
     selectSecretWord,
-    passComputer,
-    claimComputer,
+    setSecretWordHidden,
     joinedGameCodeRef,
   };
 
