@@ -530,6 +530,11 @@ export function InstructorPage() {
         <section className="space-y-6">
           {!draft && (
             <div className="paper-card p-6 text-center text-pencil/60">
+              {saveMessage && (
+                <div className="mb-4 p-3 bg-grass/10 text-grass rounded-lg text-sm text-left">
+                  {saveMessage}
+                </div>
+              )}
               <p className="font-ui text-sm">
                 Select a configuration on the left or create a new one to begin.
               </p>
