@@ -69,6 +69,7 @@ export function createGameSession(
   isLocalMode: boolean = false,
   showOnlyLastQuestion: boolean = false,
   randomSecretWords: boolean = false,
+  sharedComputerMode: boolean = false,
 ): GameSession {
   const now = new Date();
   const expiresAt = new Date(now.getTime() + 5 * 60 * 1000); // 5 minutes
@@ -81,6 +82,9 @@ export function createGameSession(
     isLocalMode,
     showOnlyLastQuestion,
     randomSecretWords,
+    sharedComputerMode,
+    computerHolderIndex: null, // Will be set when game starts
+    computerBeingPassed: false,
     phase: "waiting",
     players: [],
     gameState: {
@@ -173,6 +177,10 @@ export function addPlayer(
     } else {
       // Go to selecting phase for players to choose their words
       session.phase = "selecting";
+    }
+    // In shared computer mode, player 0 starts with the computer
+    if (session.sharedComputerMode) {
+      session.computerHolderIndex = 0;
     }
   }
 
@@ -462,4 +470,58 @@ export function getPlayerSecretWord(
     return null;
   }
   return session.gameState.cards[player.secretWordIndex].word;
+}
+
+/** Pass the computer to the other player (shared computer mode) */
+export function passComputer(
+  session: GameSession,
+  playerId: string,
+): { success: true; playerIndex: number } | { success: false; error: string } {
+  const playerIndex = session.players.findIndex((p) => p.id === playerId);
+  if (playerIndex === -1) {
+    return { success: false, error: "Player not found" };
+  }
+
+  if (!session.sharedComputerMode) {
+    return { success: false, error: "Shared computer mode is not enabled" };
+  }
+
+  if (session.computerHolderIndex !== playerIndex) {
+    return { success: false, error: "You don't have the computer" };
+  }
+
+  if (session.computerBeingPassed) {
+    return { success: false, error: "Computer is already being passed" };
+  }
+
+  // Mark computer as being passed
+  session.computerBeingPassed = true;
+  session.computerHolderIndex = null;
+
+  return { success: true, playerIndex };
+}
+
+/** Claim the computer when it's being passed (shared computer mode) */
+export function claimComputer(
+  session: GameSession,
+  playerId: string,
+): { success: true; playerIndex: number } | { success: false; error: string } {
+  const playerIndex = session.players.findIndex((p) => p.id === playerId);
+  if (playerIndex === -1) {
+    return { success: false, error: "Player not found" };
+  }
+
+  if (!session.sharedComputerMode) {
+    return { success: false, error: "Shared computer mode is not enabled" };
+  }
+
+  if (!session.computerBeingPassed) {
+    return { success: false, error: "Computer is not being passed" };
+  }
+
+  // Claim the computer
+  session.computerBeingPassed = false;
+  session.computerHolderIndex = playerIndex;
+
+  return { success: true, playerIndex };
 }

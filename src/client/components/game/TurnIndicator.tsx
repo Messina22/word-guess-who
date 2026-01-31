@@ -1,7 +1,7 @@
 import { useGameState } from "@client/hooks/useGameState";
 
 export function TurnIndicator() {
-  const { isMyTurn, myPlayer, opponent, mySecretWord, connected } = useGameState();
+  const { isMyTurn, myPlayer, opponent, mySecretWord, connected, sharedComputerMode, iHaveComputer } = useGameState();
 
   return (
     <div className="paper-card p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -15,6 +15,11 @@ export function TurnIndicator() {
         <div className="text-center sm:text-left">
           <p className="text-sm text-pencil/70 font-ui">You are</p>
           <p className="font-display text-xl text-pencil">{myPlayer?.name || "Player"}</p>
+          {sharedComputerMode && (
+            <p className="text-xs text-pencil/50 font-ui">
+              {iHaveComputer ? "You have the computer" : "Opponent has the computer"}
+            </p>
+          )}
         </div>
       </div>
 

@@ -13,8 +13,10 @@ export function QuestionPanel() {
     lastGuess,
     lastAnswer,
     playerIndex,
+    sharedComputerMode,
+    iHaveComputer,
   } = useGameState();
-  const { askQuestion, answerQuestion, makeGuess } = useGameActions();
+  const { askQuestion, answerQuestion, makeGuess, passComputer } = useGameActions();
 
   const [question, setQuestion] = useState("");
   const [guessWord, setGuessWord] = useState("");
@@ -87,6 +89,43 @@ export function QuestionPanel() {
   }
 
   if (!isMyTurn) {
+    // In shared computer mode, if I have the computer but it's not my turn,
+    // show the "Pass Computer" button
+    if (sharedComputerMode && iHaveComputer) {
+      return (
+        <div className="paper-card p-4 sm:p-6">
+          <div className="text-center mb-4">
+            <span className="font-display text-xl text-pencil">
+              Your turn is complete!
+            </span>
+          </div>
+          {lastAnswer !== null && (
+            <div className="mb-4 p-3 bg-crayon-blue/10 rounded-lg">
+              <p className="text-sm text-pencil">
+                Answer received: <strong>{lastAnswer ? "Yes" : "No"}</strong>
+              </p>
+            </div>
+          )}
+          {lastGuess && lastGuess.playerIndex === playerIndex && !lastGuess.correct && (
+            <div className="mb-4 p-3 bg-paper-red/10 rounded-lg">
+              <p className="text-sm text-pencil">
+                Your guess "{lastGuess.word}" was wrong. Turn passes to opponent.
+              </p>
+            </div>
+          )}
+          <button
+            onClick={passComputer}
+            className="btn-primary w-full bg-tangerine hover:bg-tangerine/90 py-4 text-lg"
+          >
+            Done - Pass Computer to {opponent?.name || "Opponent"}
+          </button>
+          <p className="text-xs text-pencil/60 mt-2 text-center">
+            Make sure you're ready to hand over the device!
+          </p>
+        </div>
+      );
+    }
+
     return (
       <div className="paper-card p-4 sm:p-6">
         <div className="flex items-center gap-2 text-pencil">

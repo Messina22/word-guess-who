@@ -258,6 +258,30 @@ function gameReducer(
             opponentHasSelected: true,
           };
 
+        case "computer_passed":
+          // Computer is being passed - update session state
+          if (!state.session) return state;
+          return {
+            ...state,
+            session: {
+              ...state.session,
+              computerHolderIndex: null,
+              computerBeingPassed: true,
+            },
+          };
+
+        case "computer_claimed":
+          // Computer was claimed
+          if (!state.session) return state;
+          return {
+            ...state,
+            session: {
+              ...state.session,
+              computerHolderIndex: message.byPlayerIndex,
+              computerBeingPassed: false,
+            },
+          };
+
         default:
           return state;
       }
@@ -278,6 +302,8 @@ interface GameContextValue extends GameContextState {
   makeGuess: (word: string) => void;
   leaveGame: () => void;
   selectSecretWord: (cardIndex: number) => void;
+  passComputer: () => void;
+  claimComputer: () => void;
   /** Ref set when join_game is sent; used to avoid double-join (e.g. Strict Mode remount) */
   joinedGameCodeRef: React.MutableRefObject<string | null>;
 }
@@ -369,6 +395,14 @@ export function GameProvider({ children }: { children: ReactNode }) {
     [send],
   );
 
+  const passComputer = useCallback(() => {
+    send({ type: "pass_computer" });
+  }, [send]);
+
+  const claimComputer = useCallback(() => {
+    send({ type: "claim_computer" });
+  }, [send]);
+
   const value: GameContextValue = {
     ...state,
     dispatch,
@@ -380,6 +414,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
     makeGuess,
     leaveGame,
     selectSecretWord,
+    passComputer,
+    claimComputer,
     joinedGameCodeRef,
   };
 

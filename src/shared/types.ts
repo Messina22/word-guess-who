@@ -127,6 +127,12 @@ export interface GameSession {
   showOnlyLastQuestion: boolean;
   /** Whether secret words are randomly assigned (true) or player-selected (false) */
   randomSecretWords: boolean;
+  /** Whether both players share one computer and must pass it between turns */
+  sharedComputerMode: boolean;
+  /** Player index who currently has the computer (null if no one, only used in sharedComputerMode) */
+  computerHolderIndex: number | null;
+  /** Whether the computer is being passed (waiting for claim) */
+  computerBeingPassed: boolean;
   /** Current phase of the game */
   phase: GamePhase;
   /** Players in the session (max 2) */
@@ -149,6 +155,12 @@ export interface PublicGameSession {
   showOnlyLastQuestion: boolean;
   /** Whether secret words are randomly assigned (true) or player-selected (false) */
   randomSecretWords: boolean;
+  /** Whether both players share one computer and must pass it between turns */
+  sharedComputerMode: boolean;
+  /** Player index who currently has the computer (null if no one) */
+  computerHolderIndex: number | null;
+  /** Whether the computer is being passed (waiting for claim) */
+  computerBeingPassed: boolean;
   phase: GamePhase;
   players: Array<{ id: string; name: string; connected: boolean }>;
   createdAt: string;
@@ -166,7 +178,9 @@ export type ClientMessageType =
   | "answer_question"
   | "make_guess"
   | "leave_game"
-  | "select_secret_word";
+  | "select_secret_word"
+  | "pass_computer"
+  | "claim_computer";
 
 /** Server → Client message types */
 export type ServerMessageType =
@@ -181,7 +195,9 @@ export type ServerMessageType =
   | "guess_made"
   | "game_over"
   | "game_expired"
-  | "word_selected";
+  | "word_selected"
+  | "computer_passed"
+  | "computer_claimed";
 
 /** Base client message */
 interface ClientMessageBase {
@@ -232,6 +248,16 @@ export interface SelectSecretWordMessage extends ClientMessageBase {
   cardIndex: number;
 }
 
+/** Pass the computer to the other player (shared computer mode) */
+export interface PassComputerMessage extends ClientMessageBase {
+  type: "pass_computer";
+}
+
+/** Claim the computer when it's being passed to you (shared computer mode) */
+export interface ClaimComputerMessage extends ClientMessageBase {
+  type: "claim_computer";
+}
+
 /** Union of all client messages */
 export type ClientMessage =
   | JoinGameMessage
@@ -240,7 +266,9 @@ export type ClientMessage =
   | AnswerQuestionMessage
   | MakeGuessMessage
   | LeaveGameMessage
-  | SelectSecretWordMessage;
+  | SelectSecretWordMessage
+  | PassComputerMessage
+  | ClaimComputerMessage;
 
 /** Base server message */
 interface ServerMessageBase {
@@ -349,6 +377,18 @@ export interface WordSelectedMessage extends ServerMessageBase {
   playerIndex: number;
 }
 
+/** Computer is being passed (shared computer mode) */
+export interface ComputerPassedMessage extends ServerMessageBase {
+  type: "computer_passed";
+  fromPlayerIndex: number;
+}
+
+/** Computer was claimed (shared computer mode) */
+export interface ComputerClaimedMessage extends ServerMessageBase {
+  type: "computer_claimed";
+  byPlayerIndex: number;
+}
+
 /** Union of all server messages */
 export type ServerMessage =
   | ErrorMessage
@@ -362,7 +402,9 @@ export type ServerMessage =
   | GuessMadeMessage
   | GameOverMessage
   | GameExpiredMessage
-  | WordSelectedMessage;
+  | WordSelectedMessage
+  | ComputerPassedMessage
+  | ComputerClaimedMessage;
 
 // ============================================
 // API Types for Game Sessions
@@ -377,6 +419,8 @@ export interface CreateGameInput {
   showOnlyLastQuestion?: boolean;
   /** Automatically assign random secret words (otherwise players choose) */
   randomSecretWords?: boolean;
+  /** Both players share one computer and must pass it between turns */
+  sharedComputerMode?: boolean;
 }
 
 /** Response when creating a game */

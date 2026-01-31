@@ -27,6 +27,8 @@ import {
   getPlayerSecretWord,
   generateGameCode,
   selectSecretWord,
+  passComputer,
+  claimComputer,
 } from "./game-engine";
 import { getConfig } from "./config-manager";
 
@@ -54,6 +56,7 @@ class SessionManager {
     isLocalMode: boolean = false,
     showOnlyLastQuestion: boolean = false,
     randomSecretWords: boolean = false,
+    sharedComputerMode: boolean = false,
   ): Promise<GameSession | { error: string }> {
     const config = getConfig(configId);
     if (!config) {
@@ -78,6 +81,7 @@ class SessionManager {
       isLocalMode,
       showOnlyLastQuestion,
       randomSecretWords,
+      sharedComputerMode,
     );
     session.code = gameCode; // Use the verified unique code
 
@@ -241,6 +245,14 @@ class SessionManager {
         this.handleSelectSecretWord(room, playerId, message.cardIndex);
         break;
 
+      case "pass_computer":
+        this.handlePassComputer(room, playerId);
+        break;
+
+      case "claim_computer":
+        this.handleClaimComputer(room, playerId);
+        break;
+
       case "leave_game":
         this.handleDisconnect(ws);
         ws.close();
@@ -374,6 +386,40 @@ class SessionManager {
     }
   }
 
+  /** Handle passing the computer (shared computer mode) */
+  private handlePassComputer(room: GameRoom, playerId: string): void {
+    const result = passComputer(room.session, playerId);
+
+    if (!result.success) {
+      const socket = room.sockets.get(playerId);
+      if (socket) this.sendError(socket, result.error);
+      return;
+    }
+
+    // Broadcast to all players that computer is being passed
+    this.broadcast(room, {
+      type: "computer_passed",
+      fromPlayerIndex: result.playerIndex,
+    });
+  }
+
+  /** Handle claiming the computer (shared computer mode) */
+  private handleClaimComputer(room: GameRoom, playerId: string): void {
+    const result = claimComputer(room.session, playerId);
+
+    if (!result.success) {
+      const socket = room.sockets.get(playerId);
+      if (socket) this.sendError(socket, result.error);
+      return;
+    }
+
+    // Broadcast to all players that computer was claimed
+    this.broadcast(room, {
+      type: "computer_claimed",
+      byPlayerIndex: result.playerIndex,
+    });
+  }
+
   /** Send full game state to a player */
   private sendGameState(
     ws: ServerWebSocket<WebSocketData>,
@@ -394,6 +440,9 @@ class SessionManager {
         isLocalMode: session.isLocalMode,
         showOnlyLastQuestion: session.showOnlyLastQuestion,
         randomSecretWords: session.randomSecretWords,
+        sharedComputerMode: session.sharedComputerMode,
+        computerHolderIndex: session.computerHolderIndex,
+        computerBeingPassed: session.computerBeingPassed,
         phase: session.phase,
         players: session.players.map((p) => ({
           id: p.id,
