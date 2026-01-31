@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useGameState } from "@client/hooks/useGameState";
 import { useGameActions } from "@client/hooks/useGameActions";
 import type { CardState } from "@shared/types";
@@ -36,9 +37,14 @@ function SelectionCard({ card, onClick }: SelectionCardProps) {
 }
 
 export function WordSelectionScreen() {
-  const { cards, hasSelectedWord, opponentHasSelected, mySecretWord, opponent } =
+  const { cards, hasSelectedWord, opponentHasSelected, mySecretWord, opponent, sharedComputerMode, session } =
     useGameState();
   const { selectSecretWord } = useGameActions();
+
+  // In shared computer mode, track if we're selecting for the second player
+  const [selectingForPlayer2, setSelectingForPlayer2] = useState(false);
+  // Track if player 1 has confirmed they're ready (after handoff)
+  const [player2Ready, setPlayer2Ready] = useState(false);
 
   const gridCols =
     cards.length <= 12
@@ -49,12 +55,119 @@ export function WordSelectionScreen() {
           ? 5
           : 6;
 
+  // In shared computer mode, after player 1 selects, show handoff screen
+  if (sharedComputerMode && hasSelectedWord && !opponentHasSelected && !selectingForPlayer2) {
+    return (
+      <div className="paper-card p-8 max-w-md mx-auto text-center">
+        <div className="mb-6">
+          <div className="w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+            <span className="text-4xl">&#11088;</span>
+          </div>
+          <h2 className="font-display text-2xl text-pencil mb-2">
+            Your Secret Word
+          </h2>
+          <div className="inline-block bg-lined-paper rounded-lg p-4 shadow-md">
+            <span className="font-word text-3xl text-pencil">{mySecretWord}</span>
+          </div>
+        </div>
+
+        <div className="border-t border-pencil/20 pt-6">
+          <p className="font-ui text-pencil/70 mb-4">
+            Remember your word! Now hand the device to{" "}
+            <span className="font-semibold text-pencil">{opponent?.name ?? "your opponent"}</span>{" "}
+            so they can select their secret word.
+          </p>
+          <button
+            onClick={() => setSelectingForPlayer2(true)}
+            className="btn-primary w-full py-3 text-lg"
+          >
+            Continue to {opponent?.name ?? "Opponent"}'s Turn
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // In shared computer mode, show ready screen for player 2
+  if (sharedComputerMode && selectingForPlayer2 && !player2Ready) {
+    return (
+      <div className="paper-card p-8 max-w-md mx-auto text-center">
+        <div className="mb-6">
+          <div className="w-20 h-20 mx-auto mb-4 bg-crayon-blue/20 rounded-full flex items-center justify-center">
+            <svg
+              className="w-10 h-10 text-crayon-blue"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+              />
+            </svg>
+          </div>
+          <h2 className="font-display text-2xl text-pencil mb-2">
+            {opponent?.name ?? "Player 2"}'s Turn
+          </h2>
+        </div>
+
+        <p className="font-ui text-pencil/70 mb-6">
+          Make sure {session?.players[0]?.name ?? "the other player"} can't see the screen.
+          <br />
+          When you're ready, tap the button below to choose your secret word.
+        </p>
+        <button
+          onClick={() => setPlayer2Ready(true)}
+          className="btn-primary w-full py-4 text-lg"
+        >
+          I'm Ready - Show Me the Words
+        </button>
+      </div>
+    );
+  }
+
+  // In shared computer mode, player 2 is selecting
+  if (sharedComputerMode && selectingForPlayer2 && player2Ready && !opponentHasSelected) {
+    return (
+      <div className="max-w-4xl mx-auto">
+        <div className="text-center mb-6">
+          <h2 className="font-display text-2xl text-pencil mb-2">
+            {opponent?.name ?? "Player 2"}, Choose Your Secret Word
+          </h2>
+          <p className="font-ui text-pencil/70">
+            Click on a word to select it as your secret word. {session?.players[0]?.name ?? "Your opponent"} will try to guess it!
+          </p>
+        </div>
+
+        <div className="paper-card p-4 sm:p-6">
+          <div
+            className="grid gap-2 sm:gap-3"
+            style={{
+              gridTemplateColumns: `repeat(${gridCols}, minmax(0, 1fr))`,
+            }}
+          >
+            {cards.map((card) => (
+              <SelectionCard
+                key={card.index}
+                card={card}
+                onClick={() => selectSecretWord(card.index, 1)} // Select for player index 1
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Normal flow: player has selected, waiting for opponent (non-shared mode)
   if (hasSelectedWord) {
     return (
       <div className="paper-card p-8 max-w-md mx-auto text-center">
         <div className="mb-6">
           <div className="w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-            <span className="text-4xl">⭐</span>
+            <span className="text-4xl">&#11088;</span>
           </div>
           <h2 className="font-display text-2xl text-pencil mb-2">
             Your Secret Word
@@ -111,6 +224,7 @@ export function WordSelectionScreen() {
     );
   }
 
+  // Default: show word selection grid
   return (
     <div className="max-w-4xl mx-auto">
       <div className="text-center mb-6">

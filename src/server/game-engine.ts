@@ -83,8 +83,6 @@ export function createGameSession(
     showOnlyLastQuestion,
     randomSecretWords,
     sharedComputerMode,
-    computerHolderIndex: null, // Will be set when game starts
-    computerBeingPassed: false,
     phase: "waiting",
     players: [],
     gameState: {
@@ -177,10 +175,6 @@ export function addPlayer(
     } else {
       // Go to selecting phase for players to choose their words
       session.phase = "selecting";
-    }
-    // In shared computer mode, player 0 starts with the computer
-    if (session.sharedComputerMode) {
-      session.computerHolderIndex = 0;
     }
   }
 
@@ -414,21 +408,34 @@ export function selectSecretWord(
   session: GameSession,
   playerId: string,
   cardIndex: number,
+  forPlayerIndex?: number,
 ):
   | { success: true; playerIndex: number; bothSelected: boolean }
   | { success: false; error: string } {
-  const playerIndex = session.players.findIndex((p) => p.id === playerId);
-  if (playerIndex === -1) {
-    return { success: false, error: "Player not found" };
+  // In shared computer mode, forPlayerIndex can be used to select on behalf of another player
+  let targetPlayerIndex: number;
+
+  if (forPlayerIndex !== undefined && session.sharedComputerMode) {
+    // Validate the forPlayerIndex
+    if (forPlayerIndex < 0 || forPlayerIndex >= session.players.length) {
+      return { success: false, error: "Invalid player index" };
+    }
+    targetPlayerIndex = forPlayerIndex;
+  } else {
+    // Normal mode: find player by their ID
+    targetPlayerIndex = session.players.findIndex((p) => p.id === playerId);
+    if (targetPlayerIndex === -1) {
+      return { success: false, error: "Player not found" };
+    }
   }
 
   if (session.phase !== "selecting") {
     return { success: false, error: "Game is not in selecting phase" };
   }
 
-  const player = session.players[playerIndex];
+  const player = session.players[targetPlayerIndex];
   if (player.hasSelectedWord) {
-    return { success: false, error: "You have already selected a word" };
+    return { success: false, error: "This player has already selected a word" };
   }
 
   if (!session.gameState) {
@@ -440,11 +447,11 @@ export function selectSecretWord(
     return { success: false, error: "Invalid card index" };
   }
 
-  // Check if opponent already selected this word
-  const opponentIndex = playerIndex === 0 ? 1 : 0;
-  const opponent = session.players[opponentIndex];
-  if (opponent && opponent.secretWordIndex === cardIndex) {
-    return { success: false, error: "This word is already taken by your opponent" };
+  // Check if the other player already selected this word
+  const otherPlayerIndex = targetPlayerIndex === 0 ? 1 : 0;
+  const otherPlayer = session.players[otherPlayerIndex];
+  if (otherPlayer && otherPlayer.secretWordIndex === cardIndex) {
+    return { success: false, error: "This word is already taken by the other player" };
   }
 
   // Assign the word
@@ -457,7 +464,7 @@ export function selectSecretWord(
     session.phase = "playing";
   }
 
-  return { success: true, playerIndex, bothSelected };
+  return { success: true, playerIndex: targetPlayerIndex, bothSelected };
 }
 
 /** Get the secret word for a player */
@@ -470,58 +477,4 @@ export function getPlayerSecretWord(
     return null;
   }
   return session.gameState.cards[player.secretWordIndex].word;
-}
-
-/** Pass the computer to the other player (shared computer mode) */
-export function passComputer(
-  session: GameSession,
-  playerId: string,
-): { success: true; playerIndex: number } | { success: false; error: string } {
-  const playerIndex = session.players.findIndex((p) => p.id === playerId);
-  if (playerIndex === -1) {
-    return { success: false, error: "Player not found" };
-  }
-
-  if (!session.sharedComputerMode) {
-    return { success: false, error: "Shared computer mode is not enabled" };
-  }
-
-  if (session.computerHolderIndex !== playerIndex) {
-    return { success: false, error: "You don't have the computer" };
-  }
-
-  if (session.computerBeingPassed) {
-    return { success: false, error: "Computer is already being passed" };
-  }
-
-  // Mark computer as being passed
-  session.computerBeingPassed = true;
-  session.computerHolderIndex = null;
-
-  return { success: true, playerIndex };
-}
-
-/** Claim the computer when it's being passed (shared computer mode) */
-export function claimComputer(
-  session: GameSession,
-  playerId: string,
-): { success: true; playerIndex: number } | { success: false; error: string } {
-  const playerIndex = session.players.findIndex((p) => p.id === playerId);
-  if (playerIndex === -1) {
-    return { success: false, error: "Player not found" };
-  }
-
-  if (!session.sharedComputerMode) {
-    return { success: false, error: "Shared computer mode is not enabled" };
-  }
-
-  if (!session.computerBeingPassed) {
-    return { success: false, error: "Computer is not being passed" };
-  }
-
-  // Claim the computer
-  session.computerBeingPassed = false;
-  session.computerHolderIndex = playerIndex;
-
-  return { success: true, playerIndex };
 }

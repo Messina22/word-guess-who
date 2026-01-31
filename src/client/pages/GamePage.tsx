@@ -9,12 +9,11 @@ import { TurnIndicator } from "@client/components/game/TurnIndicator";
 import { GameOverOverlay } from "@client/components/game/GameOverOverlay";
 import { WaitingRoom } from "@client/components/lobby/WaitingRoom";
 import { WordSelectionScreen } from "@client/components/game/WordSelectionScreen";
-import { ComputerPassScreen } from "@client/components/game/ComputerPassScreen";
 
 export function GamePage() {
   const { code } = useParams<{ code: string }>();
   const navigate = useNavigate();
-  const { session, connected, error, isWaiting, isSelecting, isFinished, shouldShowPassScreen } = useGameState();
+  const { session, connected, error, isWaiting, isSelecting, isFinished } = useGameState();
   const { joinGame, leaveGame, clearError, joinedGameCodeRef } =
     useGameActions();
   const [hasJoined, setHasJoined] = useState(false);
@@ -186,7 +185,6 @@ export function GamePage() {
       </main>
 
       {isFinished && <GameOverOverlay />}
-      {shouldShowPassScreen && !isFinished && <ComputerPassScreen />}
     </div>
   );
 }

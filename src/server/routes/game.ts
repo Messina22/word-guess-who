@@ -66,8 +66,6 @@ export function handleGetGame(code: string): Response {
     showOnlyLastQuestion: session.showOnlyLastQuestion,
     randomSecretWords: session.randomSecretWords,
     sharedComputerMode: session.sharedComputerMode,
-    computerHolderIndex: session.computerHolderIndex,
-    computerBeingPassed: session.computerBeingPassed,
     phase: session.phase,
     players: session.players.map((p) => ({
       id: p.id,
