@@ -129,10 +129,6 @@ export interface GameSession {
   randomSecretWords: boolean;
   /** Whether both players share one computer and must pass it between turns */
   sharedComputerMode: boolean;
-  /** Player index who currently has the computer (null if no one, only used in sharedComputerMode) */
-  computerHolderIndex: number | null;
-  /** Whether the computer is being passed (waiting for claim) */
-  computerBeingPassed: boolean;
   /** Current phase of the game */
   phase: GamePhase;
   /** Players in the session (max 2) */
@@ -157,10 +153,6 @@ export interface PublicGameSession {
   randomSecretWords: boolean;
   /** Whether both players share one computer and must pass it between turns */
   sharedComputerMode: boolean;
-  /** Player index who currently has the computer (null if no one) */
-  computerHolderIndex: number | null;
-  /** Whether the computer is being passed (waiting for claim) */
-  computerBeingPassed: boolean;
   phase: GamePhase;
   players: Array<{ id: string; name: string; connected: boolean }>;
   createdAt: string;
@@ -179,8 +171,7 @@ export type ClientMessageType =
   | "make_guess"
   | "leave_game"
   | "select_secret_word"
-  | "pass_computer"
-  | "claim_computer";
+  | "end_turn";
 
 /** Server → Client message types */
 export type ServerMessageType =
@@ -196,8 +187,7 @@ export type ServerMessageType =
   | "game_over"
   | "game_expired"
   | "word_selected"
-  | "computer_passed"
-  | "computer_claimed";
+  | "turn_ended";
 
 /** Base client message */
 interface ClientMessageBase {
@@ -246,16 +236,13 @@ export interface LeaveGameMessage extends ClientMessageBase {
 export interface SelectSecretWordMessage extends ClientMessageBase {
   type: "select_secret_word";
   cardIndex: number;
+  /** In shared computer mode, allows selecting on behalf of another player */
+  forPlayerIndex?: number;
 }
 
-/** Pass the computer to the other player (shared computer mode) */
-export interface PassComputerMessage extends ClientMessageBase {
-  type: "pass_computer";
-}
-
-/** Claim the computer when it's being passed to you (shared computer mode) */
-export interface ClaimComputerMessage extends ClientMessageBase {
-  type: "claim_computer";
+/** End turn without guessing (used in shared computer mode to pass the device) */
+export interface EndTurnMessage extends ClientMessageBase {
+  type: "end_turn";
 }
 
 /** Union of all client messages */
@@ -267,8 +254,7 @@ export type ClientMessage =
   | MakeGuessMessage
   | LeaveGameMessage
   | SelectSecretWordMessage
-  | PassComputerMessage
-  | ClaimComputerMessage;
+  | EndTurnMessage;
 
 /** Base server message */
 interface ServerMessageBase {
@@ -377,16 +363,11 @@ export interface WordSelectedMessage extends ServerMessageBase {
   playerIndex: number;
 }
 
-/** Computer is being passed (shared computer mode) */
-export interface ComputerPassedMessage extends ServerMessageBase {
-  type: "computer_passed";
-  fromPlayerIndex: number;
-}
-
-/** Computer was claimed (shared computer mode) */
-export interface ComputerClaimedMessage extends ServerMessageBase {
-  type: "computer_claimed";
-  byPlayerIndex: number;
+/** Turn ended (used in shared computer mode to signal view switch) */
+export interface TurnEndedMessage extends ServerMessageBase {
+  type: "turn_ended";
+  /** The player whose turn it now is */
+  nextPlayerIndex: number;
 }
 
 /** Union of all server messages */
@@ -403,8 +384,7 @@ export type ServerMessage =
   | GameOverMessage
   | GameExpiredMessage
   | WordSelectedMessage
-  | ComputerPassedMessage
-  | ComputerClaimedMessage;
+  | TurnEndedMessage;
 
 // ============================================
 // API Types for Game Sessions

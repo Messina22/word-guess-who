@@ -267,6 +267,13 @@ function gameReducer(
             opponentHasSelected: true,
           };
 
+        case "turn_ended":
+          // Turn has ended, update current turn
+          return {
+            ...state,
+            currentTurn: message.nextPlayerIndex,
+          };
+
         default:
           return state;
       }
@@ -287,6 +294,8 @@ interface GameContextValue extends GameContextState {
   makeGuess: (word: string) => void;
   leaveGame: () => void;
   selectSecretWord: (cardIndex: number, forPlayerIndex?: number) => void;
+  /** End turn without guessing (pass the device in shared computer mode) */
+  endTurn: () => void;
   /** Toggle visibility of the secret word indicator */
   setSecretWordHidden: (hidden: boolean) => void;
   /** Ref set when join_game is sent; used to avoid double-join (e.g. Strict Mode remount) */
@@ -380,6 +389,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
     [send],
   );
 
+  const endTurn = useCallback(() => {
+    send({ type: "end_turn" });
+  }, [send]);
+
   const setSecretWordHidden = useCallback((hidden: boolean) => {
     dispatch({ type: "SET_SECRET_WORD_HIDDEN", hidden });
   }, []);
@@ -395,6 +408,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     makeGuess,
     leaveGame,
     selectSecretWord,
+    endTurn,
     setSecretWordHidden,
     joinedGameCodeRef,
   };
