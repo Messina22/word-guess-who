@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { CreateGameForm } from "@client/components/lobby/CreateGameForm";
 import { JoinGameForm } from "@client/components/lobby/JoinGameForm";
 
@@ -11,6 +12,14 @@ export function HomePage() {
         <p className="font-ui text-pencil/70">
           A two-player game for practicing sight words
         </p>
+        <div className="mt-4">
+          <Link
+            to="/instructor"
+            className="btn-secondary inline-block text-sm py-2 px-4"
+          >
+            Instructor Dashboard
+          </Link>
+        </div>
       </header>
 
       <main className="max-w-4xl mx-auto">

@@ -85,6 +85,7 @@ export function createConfig(
   const configJson = JSON.stringify({
     name: config.name,
     description: config.description,
+    author: config.author,
     wordBank: config.wordBank,
     suggestedQuestions: config.suggestedQuestions,
     settings: config.settings,
@@ -117,6 +118,7 @@ export function updateConfig(
   }
 
   const validInput = validation.data;
+  const author = validInput.author ?? existing.author;
 
   // If ID is being changed, check for conflicts
   const newId = validInput.id || id;
@@ -128,6 +130,7 @@ export function updateConfig(
   const config: GameConfig = {
     ...validInput,
     id: newId,
+    author,
     createdAt: existing.createdAt,
     updatedAt: now,
   };
@@ -135,6 +138,7 @@ export function updateConfig(
   const configJson = JSON.stringify({
     name: config.name,
     description: config.description,
+    author: config.author,
     wordBank: config.wordBank,
     suggestedQuestions: config.suggestedQuestions,
     settings: config.settings,
@@ -185,6 +189,7 @@ export async function loadConfigsFromFiles(): Promise<void> {
           id: data.id || fileId,
           name: data.name,
           description: data.description,
+          author: data.author,
           wordBank: data.wordBank,
           suggestedQuestions: data.suggestedQuestions,
           settings: data.settings,

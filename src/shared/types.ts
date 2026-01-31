@@ -40,6 +40,7 @@ export interface GameConfig {
   id: string;
   name: string;
   description?: string;
+  author?: string;
   wordBank: WordEntry[];
   suggestedQuestions: Question[];
   settings: GameSettings;
@@ -52,6 +53,7 @@ export interface GameConfigInput {
   id?: string;
   name: string;
   description?: string;
+  author?: string;
   wordBank: WordEntry[];
   suggestedQuestions: Question[];
   settings: GameSettings;

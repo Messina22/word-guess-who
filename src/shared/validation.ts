@@ -85,6 +85,7 @@ export const gameConfigInputSchema = z.object({
     .min(1, "Name is required")
     .max(100, "Name must be 100 characters or less"),
   description: z.string().max(500, "Description must be 500 characters or less").optional(),
+  author: z.string().max(100, "Author must be 100 characters or less").optional(),
   wordBank: z
     .array(wordEntrySchema)
     .min(12, "Word bank must contain at least 12 words")
