@@ -16,8 +16,6 @@ const questionCategories = [
   "meaning",
 ] as const;
 
-/** Valid grid sizes */
-const gridSizes = [12, 16, 20, 24] as const;
 
 /** Schema for a word entry */
 export const wordEntrySchema = z.object({
@@ -44,19 +42,11 @@ export const questionSchema = z.object({
 
 /** Schema for game settings */
 export const gameSettingsSchema = z.object({
-  gridSize: z.union(
-    gridSizes.map((size) => z.literal(size)) as [
-      z.ZodLiteral<12>,
-      z.ZodLiteral<16>,
-      z.ZodLiteral<20>,
-      z.ZodLiteral<24>,
-    ],
-    {
-      errorMap: () => ({
-        message: `Grid size must be one of: ${gridSizes.join(", ")}`,
-      }),
-    }
-  ),
+  gridSize: z
+    .number()
+    .int("Grid size must be a whole number")
+    .min(4, "Grid size must be at least 4")
+    .max(100, "Grid size cannot exceed 100"),
   allowCustomQuestions: z.boolean(),
   turnTimeLimit: z
     .number()

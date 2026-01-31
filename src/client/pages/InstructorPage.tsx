@@ -13,8 +13,6 @@ const questionCategories: QuestionCategory[] = [
   "meaning",
 ];
 
-const gridSizes = [12, 16, 20, 24] as const;
-
 const defaultSettings = {
   gridSize: 24,
   allowCustomQuestions: true,
@@ -92,9 +90,12 @@ export function InstructorPage() {
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
-  const [newWord, setNewWord] = useState("");
+  const [newWords, setNewWords] = useState("");
   const [newQuestionText, setNewQuestionText] = useState("");
   const [newQuestionCategory, setNewQuestionCategory] =
+    useState<QuestionCategory>("letters");
+  const [bulkQuestions, setBulkQuestions] = useState("");
+  const [bulkQuestionCategory, setBulkQuestionCategory] =
     useState<QuestionCategory>("letters");
 
   const activeConfig = useMemo(
@@ -158,6 +159,15 @@ export function InstructorPage() {
     }
     if (!normalizedDraft.author) {
       issues.push("Set your instructor name to save configs.");
+    }
+    if (normalizedDraft.settings.gridSize > wordCount && wordCount > 0) {
+      issues.push(`Grid size (${normalizedDraft.settings.gridSize}) cannot exceed word count (${wordCount}).`);
+    }
+    if (normalizedDraft.settings.gridSize < 4) {
+      issues.push("Grid size must be at least 4.");
+    }
+    if (normalizedDraft.settings.gridSize > 100) {
+      issues.push("Grid size cannot exceed 100.");
     }
     return issues;
   }, [normalizedDraft, wordCount]);
@@ -254,19 +264,27 @@ export function InstructorPage() {
     });
   };
 
-  const handleAddWord = () => {
+  const handleAddWords = () => {
     if (!draft) {
       return;
     }
-    const trimmed = newWord.trim();
-    if (!trimmed || draft.wordBank.length >= 100) {
+    const lines = newWords
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0);
+
+    const availableSlots = 100 - draft.wordBank.length;
+    const wordsToAdd = lines.slice(0, availableSlots);
+
+    if (wordsToAdd.length === 0) {
       return;
     }
+
     setDraft({
       ...draft,
-      wordBank: [...draft.wordBank, { word: trimmed }],
+      wordBank: [...draft.wordBank, ...wordsToAdd.map((word) => ({ word }))],
     });
-    setNewWord("");
+    setNewWords("");
   };
 
   const handleQuestionTextChange = (index: number, value: string) => {
@@ -321,6 +339,41 @@ export function InstructorPage() {
       ],
     });
     setNewQuestionText("");
+  };
+
+  const handleAddBulkQuestions = () => {
+    if (!draft) {
+      return;
+    }
+    const lines = bulkQuestions
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0);
+
+    const availableSlots = 50 - draft.suggestedQuestions.length;
+    const questionsToAdd = lines.slice(0, availableSlots).map((line) => {
+      // Check for category prefix format: "category: question text"
+      const prefixMatch = line.match(
+        /^(letters|sounds|length|patterns|meaning):\s*(.+)$/i
+      );
+      if (prefixMatch) {
+        return {
+          text: prefixMatch[2],
+          category: prefixMatch[1].toLowerCase() as QuestionCategory,
+        };
+      }
+      return { text: line, category: bulkQuestionCategory };
+    });
+
+    if (questionsToAdd.length === 0) {
+      return;
+    }
+
+    setDraft({
+      ...draft,
+      suggestedQuestions: [...draft.suggestedQuestions, ...questionsToAdd],
+    });
+    setBulkQuestions("");
   };
 
   const handleGenerateId = () => {
@@ -702,23 +755,27 @@ export function InstructorPage() {
                   ))}
                 </div>
 
-                <div className="flex flex-col sm:flex-row gap-2 mt-4">
-                  <input
-                    type="text"
-                    value={newWord}
-                    onChange={(event) => setNewWord(event.target.value)}
-                    className="input-field disabled:opacity-60 disabled:cursor-not-allowed"
+                <div className="flex flex-col gap-2 mt-4">
+                  <textarea
+                    value={newWords}
+                    onChange={(event) => setNewWords(event.target.value)}
+                    className="input-field min-h-[100px] disabled:opacity-60 disabled:cursor-not-allowed"
                     disabled={isReadOnly || draft.wordBank.length >= 100}
-                    placeholder="Add a new word"
+                    placeholder={"Enter words (one per line)\ncat\ndog\nfish"}
                   />
-                  <button
-                    type="button"
-                    onClick={handleAddWord}
-                    className="btn-secondary text-sm py-2 px-4"
-                    disabled={isReadOnly || draft.wordBank.length >= 100}
-                  >
-                    Add Word
-                  </button>
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs text-pencil/60">
+                      One word per line. {100 - draft.wordBank.length} slots remaining.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleAddWords}
+                      className="btn-secondary text-sm py-2 px-4"
+                      disabled={isReadOnly || draft.wordBank.length >= 100}
+                    >
+                      Add Words
+                    </button>
+                  </div>
                 </div>
               </section>
 
@@ -811,58 +868,80 @@ export function InstructorPage() {
                     Add Question
                   </button>
                 </div>
+
+                <div className="border-t border-kraft/30 pt-4 mt-4">
+                  <p className="text-sm text-pencil/70 mb-2">Bulk Add Questions</p>
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center gap-2 mb-2">
+                      <label className="text-xs text-pencil/60">Default category:</label>
+                      <select
+                        value={bulkQuestionCategory}
+                        onChange={(event) =>
+                          setBulkQuestionCategory(event.target.value as QuestionCategory)
+                        }
+                        className="input-field text-sm py-1"
+                        disabled={isReadOnly || draft.suggestedQuestions.length >= 50}
+                      >
+                        {questionCategories.map((cat) => (
+                          <option key={cat} value={cat}>
+                            {cat}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <textarea
+                      value={bulkQuestions}
+                      onChange={(event) => setBulkQuestions(event.target.value)}
+                      className="input-field min-h-[100px] disabled:opacity-60 disabled:cursor-not-allowed"
+                      disabled={isReadOnly || draft.suggestedQuestions.length >= 50}
+                      placeholder={"Enter questions (one per line)\nDoes your word have the letter A?\nsounds: Does your word rhyme with cat?"}
+                    />
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs text-pencil/60">
+                        Optional: prefix with "category: " to override default.{" "}
+                        {50 - draft.suggestedQuestions.length} slots remaining.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={handleAddBulkQuestions}
+                        className="btn-secondary text-sm py-2 px-4"
+                        disabled={isReadOnly || draft.suggestedQuestions.length >= 50}
+                      >
+                        Add Questions
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </section>
 
               <section className="paper-card p-6">
                 <h3 className="font-display text-xl text-pencil mb-4">Settings</h3>
-                <div className="grid md:grid-cols-2 gap-4">
+                <div className="max-w-xs">
                   <div>
                     <label
                       htmlFor="gridSize"
                       className="block font-ui text-sm text-pencil/70 mb-1"
                     >
-                      Grid Size
-                    </label>
-                    <select
-                      id="gridSize"
-                      value={draft.settings.gridSize}
-                      onChange={(event) =>
-                        updateSettings({
-                          gridSize: Number(event.target.value) as GameConfigInput["settings"]["gridSize"],
-                        })
-                      }
-                      className="input-field disabled:opacity-60 disabled:cursor-not-allowed"
-                      disabled={isReadOnly}
-                    >
-                      {gridSizes.map((size) => (
-                        <option key={size} value={size}>
-                          {size} cards
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label
-                      htmlFor="turnTimeLimit"
-                      className="block font-ui text-sm text-pencil/70 mb-1"
-                    >
-                      Turn Time Limit (seconds)
+                      Grid Size (4-100)
                     </label>
                     <input
-                      id="turnTimeLimit"
+                      id="gridSize"
                       type="number"
-                      min={0}
-                      max={300}
-                      value={draft.settings.turnTimeLimit}
+                      min={4}
+                      max={100}
+                      value={draft.settings.gridSize}
                       onChange={(event) => {
-                        const value = Math.max(0, Math.min(300, Number(event.target.value)));
+                        const value = Math.max(4, Math.min(100, Number(event.target.value)));
                         updateSettings({
-                          turnTimeLimit: Number.isNaN(value) ? 0 : value,
+                          gridSize: Number.isNaN(value) ? 24 : value,
                         });
                       }}
                       className="input-field disabled:opacity-60 disabled:cursor-not-allowed"
                       disabled={isReadOnly}
                     />
+                    <p className="text-xs text-pencil/60 mt-1">
+                      Number of cards shown in the game (must have enough words in bank)
+                    </p>
                   </div>
                 </div>
 
