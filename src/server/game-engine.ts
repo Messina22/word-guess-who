@@ -14,6 +14,9 @@ import type {
 } from "@shared/types";
 import { nanoid } from "nanoid";
 
+export const SESSION_TIMEOUT_MINUTES = 20;
+export const SESSION_TIMEOUT_MS = SESSION_TIMEOUT_MINUTES * 60 * 1000;
+
 /** Generate a short, readable game code */
 export function generateGameCode(): string {
   // Use uppercase letters and numbers, avoiding confusing characters (0, O, I, 1, L)
@@ -72,7 +75,7 @@ export function createGameSession(
   sharedComputerMode: boolean = false,
 ): GameSession {
   const now = new Date();
-  const expiresAt = new Date(now.getTime() + 5 * 60 * 1000); // 5 minutes
+  const expiresAt = new Date(now.getTime() + SESSION_TIMEOUT_MS);
 
   const cards = selectWordsForGame(wordBank, gridSize);
 
@@ -398,7 +401,10 @@ export function isSessionExpired(session: GameSession): boolean {
 }
 
 /** Extend session expiration (e.g., when game starts or player reconnects) */
-export function extendSession(session: GameSession, minutes: number = 5): void {
+export function extendSession(
+  session: GameSession,
+  minutes: number = SESSION_TIMEOUT_MINUTES,
+): void {
   const newExpiry = new Date(Date.now() + minutes * 60 * 1000);
   session.expiresAt = newExpiry.toISOString();
 }

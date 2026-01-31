@@ -107,4 +107,4 @@ bun run typecheck    # TypeScript type checking
 - CORS is permissive (`*`) for development
 - In production, server serves static files from `dist/client/`
 - Player IDs stored in localStorage for reconnection support
-- Sessions expire after 5 minutes of inactivity
+- Sessions expire after 20 minutes of inactivity
