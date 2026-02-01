@@ -430,7 +430,7 @@ export function InstructorPage() {
     }
     setIsSaving(true);
     setSaveError(null);
-    const response = await api.configs.delete(draftSourceId);
+    const response = await api.configs.delete(draftSourceId, instructorName);
     if (response.success) {
       setDraft(null);
       setDraftSourceId(null);

@@ -49,9 +49,10 @@ export const api = {
         body: JSON.stringify(input),
       }),
 
-    delete: (id: string) =>
+    delete: (id: string, author?: string) =>
       request<null>(`/configs/${encodeURIComponent(id)}`, {
         method: "DELETE",
+        body: JSON.stringify({ author }),
       }),
   },
 
