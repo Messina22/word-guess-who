@@ -69,6 +69,17 @@ export function HomePage() {
 
       <footer className="text-center mt-12 text-pencil/50 text-sm">
         <p>Made for learning sight words</p>
+        <p className="mt-1">
+          Created by{" "}
+          <a
+            href="https://github.com/Messina22"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-crayon-blue hover:underline"
+          >
+            Messina22
+          </a>
+        </p>
       </footer>
     </div>
   );
