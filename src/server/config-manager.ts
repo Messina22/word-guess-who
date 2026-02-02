@@ -9,6 +9,11 @@ import {
 
 const CONFIGS_DIR = join(import.meta.dir, "../../configs");
 
+/** Normalize author name for comparison (lowercase, trimmed) */
+function normalizeAuthor(value?: string): string {
+  return value?.trim().toLowerCase() ?? "";
+}
+
 /** Convert a database row to a GameConfig object */
 function rowToConfig(row: GameConfigRow): GameConfig {
   const config = JSON.parse(row.config_json);
@@ -66,7 +71,11 @@ export function createConfig(
   const validInput = validation.data;
 
   // Generate ID if not provided
-  const id = validInput.id || generateIdFromName(validInput.name);
+  const generatedId = generateIdFromName(validInput.name);
+  if (!validInput.id && !generatedId) {
+    return { success: false, errors: ["Unable to generate valid ID from config name. Please provide an ID manually."] };
+  }
+  const id = validInput.id || generatedId;
 
   // Check for duplicate ID
   if (configExists(id)) {
@@ -85,6 +94,7 @@ export function createConfig(
   const configJson = JSON.stringify({
     name: config.name,
     description: config.description,
+    author: config.author,
     wordBank: config.wordBank,
     suggestedQuestions: config.suggestedQuestions,
     settings: config.settings,
@@ -110,6 +120,13 @@ export function updateConfig(
     return { success: false, errors: [`Config with ID '${id}' not found`] };
   }
 
+  // Verify ownership: requesting author must match existing author
+  const existingAuthor = normalizeAuthor(existing.author);
+  const requestingAuthor = normalizeAuthor(input.author);
+  if (existingAuthor !== "" && existingAuthor !== requestingAuthor) {
+    return { success: false, errors: ["You do not have permission to edit this configuration"] };
+  }
+
   // Validate input
   const validation = validateGameConfigInput(input);
   if (!validation.success) {
@@ -117,6 +134,7 @@ export function updateConfig(
   }
 
   const validInput = validation.data;
+  const author = validInput.author ?? existing.author;
 
   // If ID is being changed, check for conflicts
   const newId = validInput.id || id;
@@ -128,6 +146,7 @@ export function updateConfig(
   const config: GameConfig = {
     ...validInput,
     id: newId,
+    author,
     createdAt: existing.createdAt,
     updatedAt: now,
   };
@@ -135,6 +154,7 @@ export function updateConfig(
   const configJson = JSON.stringify({
     name: config.name,
     description: config.description,
+    author: config.author,
     wordBank: config.wordBank,
     suggestedQuestions: config.suggestedQuestions,
     settings: config.settings,
@@ -161,10 +181,26 @@ export function updateConfig(
 }
 
 /** Delete a game configuration */
-export function deleteConfig(id: string): boolean {
+export function deleteConfig(
+  id: string,
+  requestingAuthor?: string
+): { success: true } | { success: false; error: string } {
+  // Check if config exists and get author
+  const existing = getConfig(id);
+  if (!existing) {
+    return { success: false, error: `Config with ID '${id}' not found` };
+  }
+
+  // Verify ownership: requesting author must match existing author
+  const existingAuthor = normalizeAuthor(existing.author);
+  const normalizedRequestingAuthor = normalizeAuthor(requestingAuthor);
+  if (existingAuthor !== "" && existingAuthor !== normalizedRequestingAuthor) {
+    return { success: false, error: "You do not have permission to delete this configuration" };
+  }
+
   const db = getDb();
-  const result = db.run("DELETE FROM game_configs WHERE id = ?", [id]);
-  return result.changes > 0;
+  db.run("DELETE FROM game_configs WHERE id = ?", [id]);
+  return { success: true };
 }
 
 /** Load JSON config files from the configs directory into the database */
@@ -185,6 +221,7 @@ export async function loadConfigsFromFiles(): Promise<void> {
           id: data.id || fileId,
           name: data.name,
           description: data.description,
+          author: data.author,
           wordBank: data.wordBank,
           suggestedQuestions: data.suggestedQuestions,
           settings: data.settings,

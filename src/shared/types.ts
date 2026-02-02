@@ -23,8 +23,8 @@ export interface Question {
   category: QuestionCategory;
 }
 
-/** Valid grid sizes for the game board */
-export type GridSize = 12 | 16 | 20 | 24;
+/** Grid size: number of cards on the game board (4-100) */
+export type GridSize = number;
 
 /** Game settings configuration */
 export interface GameSettings {
@@ -40,6 +40,7 @@ export interface GameConfig {
   id: string;
   name: string;
   description?: string;
+  author?: string;
   wordBank: WordEntry[];
   suggestedQuestions: Question[];
   settings: GameSettings;
@@ -52,6 +53,7 @@ export interface GameConfigInput {
   id?: string;
   name: string;
   description?: string;
+  author?: string;
   wordBank: WordEntry[];
   suggestedQuestions: Question[];
   settings: GameSettings;

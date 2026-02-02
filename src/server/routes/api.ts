@@ -102,12 +102,25 @@ export async function handleUpdateConfig(
 }
 
 /** DELETE /api/configs/:id - Delete a configuration */
-export function handleDeleteConfig(id: string): Response {
-  const deleted = deleteConfig(id);
-  if (!deleted) {
+export async function handleDeleteConfig(
+  id: string,
+  request: Request
+): Promise<Response> {
+  let requestingAuthor: string | undefined;
+  try {
+    const body = await request.json();
+    requestingAuthor = body?.author;
+  } catch {
+    // No body or invalid JSON is acceptable, but author won't be provided
+  }
+
+  const result = deleteConfig(id, requestingAuthor);
+  if (!result.success) {
+    const is404 = result.error.includes("not found");
+    const isForbidden = result.error.includes("permission");
     return jsonResponse<null>(
-      { success: false, error: `Config '${id}' not found` },
-      404
+      { success: false, error: result.error },
+      is404 ? 404 : isForbidden ? 403 : 400
     );
   }
   return jsonResponse<null>({ success: true });

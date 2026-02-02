@@ -16,8 +16,6 @@ const questionCategories = [
   "meaning",
 ] as const;
 
-/** Valid grid sizes */
-const gridSizes = [12, 16, 20, 24] as const;
 
 /** Schema for a word entry */
 export const wordEntrySchema = z.object({
@@ -44,19 +42,11 @@ export const questionSchema = z.object({
 
 /** Schema for game settings */
 export const gameSettingsSchema = z.object({
-  gridSize: z.union(
-    gridSizes.map((size) => z.literal(size)) as [
-      z.ZodLiteral<12>,
-      z.ZodLiteral<16>,
-      z.ZodLiteral<20>,
-      z.ZodLiteral<24>,
-    ],
-    {
-      errorMap: () => ({
-        message: `Grid size must be one of: ${gridSizes.join(", ")}`,
-      }),
-    }
-  ),
+  gridSize: z
+    .number()
+    .int("Grid size must be a whole number")
+    .min(4, "Grid size must be at least 4")
+    .max(100, "Grid size cannot exceed 100"),
   allowCustomQuestions: z.boolean(),
   turnTimeLimit: z
     .number()
@@ -77,14 +67,15 @@ const configIdSchema = z
     "ID must be lowercase alphanumeric with hyphens (e.g., 'my-config-v1')"
   );
 
-/** Schema for game config input (creation/update) */
-export const gameConfigInputSchema = z.object({
+/** Base schema for game config input (without refinements) */
+const gameConfigInputBaseSchema = z.object({
   id: configIdSchema.optional(),
   name: z
     .string()
     .min(1, "Name is required")
     .max(100, "Name must be 100 characters or less"),
   description: z.string().max(500, "Description must be 500 characters or less").optional(),
+  author: z.string().max(100, "Author must be 100 characters or less").optional(),
   wordBank: z
     .array(wordEntrySchema)
     .min(12, "Word bank must contain at least 12 words")
@@ -96,12 +87,27 @@ export const gameConfigInputSchema = z.object({
   settings: gameSettingsSchema,
 });
 
+/** Schema for game config input (creation/update) */
+export const gameConfigInputSchema = gameConfigInputBaseSchema.refine(
+  (data) => data.settings.gridSize <= data.wordBank.length,
+  {
+    message: "Grid size cannot exceed the number of words in the word bank",
+    path: ["settings", "gridSize"],
+  }
+);
+
 /** Schema for a complete game config (with auto-generated fields) */
-export const gameConfigSchema = gameConfigInputSchema.extend({
+export const gameConfigSchema = gameConfigInputBaseSchema.extend({
   id: configIdSchema,
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
-});
+}).refine(
+  (data) => data.settings.gridSize <= data.wordBank.length,
+  {
+    message: "Grid size cannot exceed the number of words in the word bank",
+    path: ["settings", "gridSize"],
+  }
+);
 
 /** Validate game config input and return typed result */
 export function validateGameConfigInput(data: unknown): {

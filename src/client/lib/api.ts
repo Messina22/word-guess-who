@@ -1,6 +1,7 @@
 import type {
   ApiResponse,
   GameConfig,
+  GameConfigInput,
   CreateGameInput,
   CreateGameResponse,
   PublicGameSession,
@@ -35,6 +36,24 @@ export const api = {
     list: () => request<GameConfig[]>("/configs"),
 
     get: (id: string) => request<GameConfig>(`/configs/${encodeURIComponent(id)}`),
+
+    create: (input: GameConfigInput) =>
+      request<GameConfig>("/configs", {
+        method: "POST",
+        body: JSON.stringify(input),
+      }),
+
+    update: (id: string, input: GameConfigInput) =>
+      request<GameConfig>(`/configs/${encodeURIComponent(id)}`, {
+        method: "PUT",
+        body: JSON.stringify(input),
+      }),
+
+    delete: (id: string, author?: string) =>
+      request<null>(`/configs/${encodeURIComponent(id)}`, {
+        method: "DELETE",
+        body: JSON.stringify({ author }),
+      }),
   },
 
   games: {
