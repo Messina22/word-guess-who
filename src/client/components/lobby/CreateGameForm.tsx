@@ -221,6 +221,18 @@ export function CreateGameForm() {
       >
         {loading ? "Creating..." : "Create Game"}
       </button>
+
+      <p className="mt-4 text-center font-ui text-xs text-pencil/50">
+        Created by{" "}
+        <a
+          href="https://github.com/Messina22"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-crayon-blue hover:underline"
+        >
+          Messina22
+        </a>
+      </p>
     </form>
   );
 }
