@@ -30,9 +30,6 @@ COPY --from=builder /app/tsconfig.json ./tsconfig.json
 # Copy built client assets
 COPY --from=builder /app/dist/client ./dist/client
 
-# Copy static assets
-COPY --from=builder /app/public ./public
-
 # Copy config files
 COPY --from=builder /app/configs ./configs
 
