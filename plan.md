@@ -639,16 +639,22 @@ interface GameSettings {
 
 ## Deployment
 
-### Hosting Options
+### Platform: Fly.io
 
-| Option | Platform | Pros | Cons |
-|--------|----------|------|------|
-| **Container** | Fly.io | Easy deploy, global edge, WebSocket support, free tier | Paid for scaling |
-| **Container** | Railway | Git-based deploys, simple UI, good free tier | Limited customization |
-| **VPS** | DigitalOcean/Linode | Full control, cost-effective | Manual server management |
-| **PaaS** | Render | Native Bun support, auto-deploy from Git | Cold starts on free tier |
+**Why Fly.io:**
+- Native WebSocket support (required for real-time gameplay)
+- Simple container deployments with `flyctl`
+- Persistent volumes for SQLite database
+- Auto-stop machines when idle (cost savings)
+- Free tier available for low-traffic apps
 
-**Recommended**: **Fly.io** or **Railway** for simplicity with WebSocket support.
+### Database Persistence: Fly.io Volumes
+
+SQLite database is persisted using Fly.io Volumes:
+- Volume mounted at `/app/data`
+- Database file: `/app/data/game.db`
+- Survives deployments and machine restarts
+- No code changes required from development setup
 
 ### CI/CD Pipeline
 
@@ -657,17 +663,25 @@ We'll use **GitHub Actions** for continuous integration and deployment.
 #### Pipeline Overview
 
 ```
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│   Push/PR   │────▶│    Test     │────▶│    Build    │────▶│   Deploy    │
-│   to main   │     │  (lint,     │     │  (Docker    │     │  (Fly.io/   │
-│             │     │   typecheck,│     │   image)    │     │   Railway)  │
-│             │     │   unit)     │     │             │     │             │
-└─────────────┘     └─────────────┘     └─────────────┘     └─────────────┘
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│   Push/PR   │────▶│    CI       │────▶│   Deploy    │
+│   to main   │     │  (lint,     │     │  (Fly.io)   │
+│             │     │   typecheck,│     │  on main    │
+│             │     │   tests)    │     │  only       │
+└─────────────┘     └─────────────┘     └─────────────┘
 ```
+
+#### CI Behavior
+
+| Check | Blocking? | Notes |
+|-------|-----------|-------|
+| Lint | No | Runs but doesn't fail the workflow |
+| Typecheck | No | Runs but doesn't fail the workflow |
+| Tests | **Yes** | Must pass to merge/deploy |
 
 #### Workflow Files
 
-##### `.github/workflows/ci.yml` - Runs on all PRs
+##### `.github/workflows/ci.yml` - Runs on all PRs and pushes to main
 
 ```yaml
 name: CI
@@ -679,8 +693,10 @@ on:
     branches: [main]
 
 jobs:
-  test:
+  lint:
+    name: Lint (non-blocking)
     runs-on: ubuntu-latest
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
 
@@ -695,15 +711,10 @@ jobs:
       - name: Lint
         run: bun run lint
 
-      - name: Type check
-        run: bun run typecheck
-
-      - name: Run tests
-        run: bun test
-
-  build:
+  typecheck:
+    name: Type Check (non-blocking)
     runs-on: ubuntu-latest
-    needs: test
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
 
@@ -715,17 +726,28 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Build
-        run: bun run build
+      - name: Type check
+        run: bun run typecheck
 
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
+  test:
+    name: Tests (blocking)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          name: build
-          path: dist/
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Run tests
+        run: bun test
 ```
 
-##### `.github/workflows/deploy.yml` - Deploys on merge to main
+##### `.github/workflows/deploy.yml` - Auto-deploys on merge to main
 
 ```yaml
 name: Deploy
@@ -736,8 +758,8 @@ on:
 
 jobs:
   deploy:
+    name: Deploy to Fly.io
     runs-on: ubuntu-latest
-    # Only deploy if CI passes (implicitly via push trigger after merge)
     steps:
       - uses: actions/checkout@v4
 
@@ -752,10 +774,6 @@ jobs:
       - name: Run tests
         run: bun test
 
-      - name: Build
-        run: bun run build
-
-      # Option A: Deploy to Fly.io
       - name: Setup Fly.io CLI
         uses: superfly/flyctl-actions/setup-flyctl@master
 
@@ -763,52 +781,6 @@ jobs:
         run: flyctl deploy --remote-only
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-
-      # Option B: Deploy to Railway (alternative)
-      # - name: Deploy to Railway
-      #   uses: bervProject/railway-deploy@main
-      #   with:
-      #     railway_token: ${{ secrets.RAILWAY_TOKEN }}
-      #     service: word-guess-who
-```
-
-##### `.github/workflows/preview.yml` - Preview deployments for PRs (optional)
-
-```yaml
-name: Preview Deploy
-
-on:
-  pull_request:
-    branches: [main]
-
-jobs:
-  preview:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Fly.io CLI
-        uses: superfly/flyctl-actions/setup-flyctl@master
-
-      - name: Deploy Preview
-        id: deploy
-        run: |
-          flyctl deploy --remote-only \
-            --app word-guess-who-pr-${{ github.event.number }} \
-            --config fly.preview.toml
-        env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-
-      - name: Comment PR with preview URL
-        uses: actions/github-script@v7
-        with:
-          script: |
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: '🚀 Preview deployed to: https://word-guess-who-pr-${{ github.event.number }}.fly.dev'
-            })
 ```
 
 ### Docker Configuration
@@ -829,7 +801,7 @@ FROM base AS builder
 COPY package.json bun.lockb ./
 RUN bun install --frozen-lockfile
 COPY . .
-RUN bun run build
+RUN bun run build:client
 
 # Production image
 FROM base AS runner
@@ -838,15 +810,41 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000
 
-# Copy built assets and production dependencies
+# Copy production dependencies
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=builder /app/dist ./dist
+
+# Copy source code (server runs from source with Bun)
+COPY --from=builder /app/src ./src
+COPY --from=builder /app/tsconfig.json ./tsconfig.json
+
+# Copy built client assets
+COPY --from=builder /app/dist/client ./dist/client
+
+# Copy static assets
 COPY --from=builder /app/public ./public
+
+# Copy config files
 COPY --from=builder /app/configs ./configs
+
+# Create data directory for SQLite (will be mounted as volume)
+RUN mkdir -p /app/data
 
 EXPOSE 3000
 
-CMD ["bun", "run", "dist/server/index.js"]
+CMD ["bun", "run", "src/server/index.ts"]
+```
+
+##### `.dockerignore`
+
+```
+node_modules
+dist
+data
+.git
+.gitignore
+*.md
+.env*
+.DS_Store
 ```
 
 ##### `fly.toml` (Fly.io configuration)
@@ -866,6 +864,11 @@ primary_region = "iad"
 
 [env]
   NODE_ENV = "production"
+  DATA_PATH = "/app/data"
+
+[mounts]
+  source = "data"
+  destination = "/app/data"
 
 [[vm]]
   cpu_kind = "shared"
@@ -873,47 +876,76 @@ primary_region = "iad"
   memory_mb = 512
 ```
 
-### Package.json Scripts
-
-```json
-{
-  "scripts": {
-    "dev": "bun --watch src/server/index.ts",
-    "build": "bun build src/server/index.ts --outdir dist/server --target bun",
-    "start": "bun run dist/server/index.js",
-    "test": "bun test",
-    "lint": "eslint src/",
-    "typecheck": "tsc --noEmit",
-    "format": "prettier --write src/"
-  }
-}
-```
-
 ### Environment Variables
 
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `PORT` | Server port (default: 3000) | No |
-| `NODE_ENV` | Environment (development/production) | No |
-| `CONFIG_PATH` | Path to game configs directory | No |
-| `DATA_PATH` | Path to runtime data directory | No |
-| `SESSION_SECRET` | Secret for session signing | Yes (prod) |
+| Variable | Description | Default | Required |
+|----------|-------------|---------|----------|
+| `PORT` | Server port | `3000` | No |
+| `NODE_ENV` | Environment mode | `development` | No |
+| `DATA_PATH` | Path to SQLite data directory | `data` | No |
 
 ### GitHub Secrets Required
 
-| Secret | Description |
-|--------|-------------|
-| `FLY_API_TOKEN` | Fly.io API token for deployments |
-| `RAILWAY_TOKEN` | Railway token (if using Railway) |
+| Secret | Description | How to Get |
+|--------|-------------|------------|
+| `FLY_API_TOKEN` | Fly.io API token for deployments | Run `fly tokens create deploy` |
 
-### Branch Protection Rules
+### Manual Setup Steps
 
-Configure on GitHub repository settings:
+Before the CI/CD pipeline will work, complete these one-time setup steps:
 
-- **Require PR reviews** before merging to main
-- **Require status checks** to pass (CI workflow)
-- **Require branches to be up to date** before merging
-- **Do not allow bypassing** the above settings
+#### 1. Install Fly.io CLI
+
+```bash
+# macOS
+brew install flyctl
+
+# Linux
+curl -L https://fly.io/install.sh | sh
+
+# Windows
+powershell -Command "iwr https://fly.io/install.ps1 -useb | iex"
+```
+
+#### 2. Authenticate and Create App
+
+```bash
+# Login to Fly.io
+fly auth login
+
+# Initialize the app (run from project root)
+fly launch --name word-guess-who --region iad --no-deploy
+```
+
+#### 3. Create Persistent Volume for SQLite
+
+```bash
+# Create a 1GB volume for database storage
+fly volumes create data --region iad --size 1
+```
+
+#### 4. Add GitHub Secret
+
+1. Generate a deploy token: `fly tokens create deploy`
+2. Go to GitHub repo → Settings → Secrets and variables → Actions
+3. Add new secret: `FLY_API_TOKEN` with the token value
+
+#### 5. First Deploy
+
+```bash
+# Deploy manually the first time to verify everything works
+fly deploy
+```
+
+### Files to Create
+
+| File | Description |
+|------|-------------|
+| `Dockerfile` | Multi-stage build for Bun application |
+| `.dockerignore` | Excludes unnecessary files from Docker build |
+| `fly.toml` | Fly.io deployment configuration |
+| `.github/workflows/ci.yml` | CI workflow (lint, typecheck, tests) |
+| `.github/workflows/deploy.yml` | Auto-deploy on merge to main |
 
 ## Resolved Decisions
 
@@ -936,4 +968,4 @@ Configure on GitHub repository settings:
 
 ---
 
-*Last updated: 2026-01-27*
+*Last updated: 2026-02-01*

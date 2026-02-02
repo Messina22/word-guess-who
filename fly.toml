@@ -1,0 +1,24 @@
+app = "word-guess-who"
+primary_region = "iad"
+
+[build]
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  auto_stop_machines = true
+  auto_start_machines = true
+  min_machines_running = 0
+
+[env]
+  NODE_ENV = "production"
+  DATA_PATH = "/app/data"
+
+[mounts]
+  source = "data"
+  destination = "/app/data"
+
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory_mb = 512
