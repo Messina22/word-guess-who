@@ -11,7 +11,6 @@ export interface GameLogEntry {
   id: string;
   opponentName: string;
   won: boolean;
-  timestamp: Date;
 }
 
 interface SessionGameLogContextValue {
@@ -19,35 +18,40 @@ interface SessionGameLogContextValue {
   gameLog: GameLogEntry[];
   /** Add a game result to the log */
   addGameResult: (opponentName: string, won: boolean) => void;
-  /** Clear all game results */
-  clearLog: () => void;
+  /** Set of game codes that have been recorded */
+  recordedGameCodes: Set<string>;
+  /** Mark a game code as recorded */
+  markGameRecorded: (code: string) => void;
 }
 
 const SessionGameLogContext = createContext<SessionGameLogContextValue | null>(
-  null
+  null,
 );
 
 export function SessionGameLogProvider({ children }: { children: ReactNode }) {
   const [gameLog, setGameLog] = useState<GameLogEntry[]>([]);
+  const [recordedGameCodes, setRecordedGameCodes] = useState<Set<string>>(
+    () => new Set(),
+  );
 
   const addGameResult = useCallback((opponentName: string, won: boolean) => {
     const entry: GameLogEntry = {
-      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      id: `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
       opponentName,
       won,
-      timestamp: new Date(),
     };
     setGameLog((prev) => [...prev, entry]);
   }, []);
 
-  const clearLog = useCallback(() => {
-    setGameLog([]);
+  const markGameRecorded = useCallback((code: string) => {
+    setRecordedGameCodes((prev) => new Set(prev).add(code));
   }, []);
 
   const value: SessionGameLogContextValue = {
     gameLog,
     addGameResult,
-    clearLog,
+    recordedGameCodes,
+    markGameRecorded,
   };
 
   return (
@@ -61,7 +65,7 @@ export function useSessionGameLog(): SessionGameLogContextValue {
   const context = useContext(SessionGameLogContext);
   if (!context) {
     throw new Error(
-      "useSessionGameLog must be used within a SessionGameLogProvider"
+      "useSessionGameLog must be used within a SessionGameLogProvider",
     );
   }
   return context;

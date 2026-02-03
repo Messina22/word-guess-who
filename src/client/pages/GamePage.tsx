@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useGameState } from "@client/hooks/useGameState";
 import { useGameActions } from "@client/hooks/useGameActions";
@@ -26,9 +26,9 @@ export function GamePage() {
   } = useGameState();
   const { joinGame, leaveGame, clearError, joinedGameCodeRef } =
     useGameActions();
-  const { addGameResult } = useSessionGameLog();
+  const { addGameResult, recordedGameCodes, markGameRecorded } =
+    useSessionGameLog();
   const [hasJoined, setHasJoined] = useState(false);
-  const gameResultRecordedRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!code) {
@@ -57,7 +57,7 @@ export function GamePage() {
   useEffect(() => {
     if (session && code) {
       const myPlayer = session.players.find(
-        (p) => p.name === localStorage.getItem("playerName")
+        (p) => p.name === localStorage.getItem("playerName"),
       );
       if (myPlayer) {
         localStorage.setItem(`playerId_${code}`, myPlayer.id);
@@ -67,11 +67,19 @@ export function GamePage() {
 
   // Record game result when game finishes
   useEffect(() => {
-    if (isFinished && opponent && code && gameResultRecordedRef.current !== code) {
-      gameResultRecordedRef.current = code;
+    if (isFinished && opponent && code && !recordedGameCodes.has(code)) {
+      markGameRecorded(code);
       addGameResult(opponent.name, iWon);
     }
-  }, [isFinished, opponent, code, iWon, addGameResult]);
+  }, [
+    isFinished,
+    opponent,
+    code,
+    iWon,
+    addGameResult,
+    recordedGameCodes,
+    markGameRecorded,
+  ]);
 
   const handleLeave = () => {
     leaveGame();
