@@ -10,7 +10,7 @@ export function HomePage() {
           Word Guess Who
         </h1>
         <p className="font-ui text-pencil/70">
-          A two-player game for practicing sight words
+          A two-player game for practicing sight & spelling words
         </p>
         <div className="mt-4">
           <Link

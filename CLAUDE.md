@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Word Guess Who is a web-based two-player educational game for practicing sight words. Players compete to guess each other's secret word by asking yes/no questions about letter patterns, sounds, and word characteristics.
+Word Guess Who is a web-based two-player educational game for practicing sight & spelling words. Players compete to guess each other's secret word by asking yes/no questions about letter patterns, sounds, and word characteristics.
 
 **Tech Stack:** Bun runtime, TypeScript, React 18, Tailwind CSS, SQLite via `bun:sqlite`, WebSockets for real-time multiplayer.
 

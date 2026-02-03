@@ -54,7 +54,7 @@ const devIndexHtml = `<!DOCTYPE html>
 </head>
 <body>
   <h1>Word Guess Who</h1>
-  <p>A two-player educational game for practicing sight words</p>
+  <p>A two-player educational game for practicing sight & spelling words</p>
   <div class="status">Development Mode - Run <code>bun run dev:client</code> for the React UI</div>
   <div class="api-link">
     <p>API endpoints:</p>
