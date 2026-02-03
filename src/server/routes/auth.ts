@@ -1,4 +1,4 @@
-import type { ApiResponse, AuthResponse, Instructor } from "@shared/types";
+import type { AuthResponse, Instructor } from "@shared/types";
 import { validateRegisterInput, validateLoginInput } from "@shared/validation";
 import {
   createInstructor,
@@ -6,19 +6,7 @@ import {
   getInstructorById,
 } from "../instructor-manager";
 import { extractTokenFromHeader, verifyToken } from "../auth";
-
-/** Create a JSON response with proper headers */
-function jsonResponse<T>(data: ApiResponse<T>, status = 200): Response {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: {
-      "Content-Type": "application/json",
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type, Authorization",
-    },
-  });
-}
+import { jsonResponse } from "../utils/response";
 
 /** POST /api/auth/register - Create a new instructor account */
 export async function handleRegister(request: Request): Promise<Response> {
