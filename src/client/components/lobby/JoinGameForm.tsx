@@ -1,12 +1,19 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-export function JoinGameForm() {
+interface JoinGameFormProps {
+  idPrefix?: string;
+}
+
+export function JoinGameForm({ idPrefix = "" }: JoinGameFormProps) {
   const navigate = useNavigate();
   const [gameCode, setGameCode] = useState("");
   const [playerName, setPlayerName] = useState(
-    localStorage.getItem("playerName") || ""
+    localStorage.getItem("playerName") || "",
   );
+
+  const playerNameId = `${idPrefix}joinPlayerName`;
+  const gameCodeId = `${idPrefix}gameCode`;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,11 +30,14 @@ export function JoinGameForm() {
       </h2>
 
       <div className="mb-4">
-        <label htmlFor="joinPlayerName" className="block font-ui text-sm text-pencil/70 mb-1">
+        <label
+          htmlFor={playerNameId}
+          className="block font-ui text-sm text-pencil/70 mb-1"
+        >
           Your Name
         </label>
         <input
-          id="joinPlayerName"
+          id={playerNameId}
           type="text"
           value={playerName}
           onChange={(e) => setPlayerName(e.target.value)}
@@ -38,11 +48,14 @@ export function JoinGameForm() {
       </div>
 
       <div className="mb-6">
-        <label htmlFor="gameCode" className="block font-ui text-sm text-pencil/70 mb-1">
+        <label
+          htmlFor={gameCodeId}
+          className="block font-ui text-sm text-pencil/70 mb-1"
+        >
           Game Code
         </label>
         <input
-          id="gameCode"
+          id={gameCodeId}
           type="text"
           value={gameCode}
           onChange={(e) => setGameCode(e.target.value.toUpperCase())}
