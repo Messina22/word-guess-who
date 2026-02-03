@@ -27,16 +27,13 @@ export function CreateGameForm() {
   // Show Only Last Question is disabled for local game modes
   const showOnlyLastQuestionDisabled = gameMode !== "online";
 
-  // Debounced config lookup
+  // Debounced config lookup - uses "default" if code is empty
   const lookupConfig = useCallback(async (code: string) => {
-    if (!code.trim()) {
-      setConfigLookup({ loading: false, config: null, error: null });
-      return;
-    }
+    const codeToLookup = code.trim() || "default";
 
     setConfigLookup({ loading: true, config: null, error: null });
 
-    const response = await api.configs.get(code.trim());
+    const response = await api.configs.get(codeToLookup);
     if (response.success && response.data) {
       setConfigLookup({ loading: false, config: response.data, error: null });
     } else {
@@ -73,7 +70,9 @@ export function CreateGameForm() {
     const response = await api.games.create({
       configId: configLookup.config.id,
       isLocalMode,
-      showOnlyLastQuestion: showOnlyLastQuestionDisabled ? false : showOnlyLastQuestion,
+      showOnlyLastQuestion: showOnlyLastQuestionDisabled
+        ? false
+        : showOnlyLastQuestion,
       randomSecretWords,
       sharedComputerMode,
     });
@@ -94,7 +93,10 @@ export function CreateGameForm() {
       </h2>
 
       <div className="mb-4">
-        <label htmlFor="playerName" className="block font-ui text-sm text-pencil/70 mb-1">
+        <label
+          htmlFor="playerName"
+          className="block font-ui text-sm text-pencil/70 mb-1"
+        >
           Your Name
         </label>
         <input
@@ -109,7 +111,10 @@ export function CreateGameForm() {
       </div>
 
       <div className="mb-4">
-        <label htmlFor="configCode" className="block font-ui text-sm text-pencil/70 mb-1">
+        <label
+          htmlFor="configCode"
+          className="block font-ui text-sm text-pencil/70 mb-1"
+        >
           Config Code
         </label>
         <input
@@ -117,12 +122,12 @@ export function CreateGameForm() {
           type="text"
           value={configCode}
           onChange={(e) => setConfigCode(e.target.value)}
-          placeholder="Enter the code from your instructor"
+          placeholder="Leave blank for default"
           className="input-field"
-          required
         />
         <p className="text-xs text-pencil/60 mt-1">
-          Ask your instructor for the config code, or use "default" for the built-in word set.
+          Leave blank to use the built-in word set, or enter a code from your
+          instructor.
         </p>
 
         {configLookup.loading && (
@@ -133,12 +138,13 @@ export function CreateGameForm() {
           <div className="mt-2 p-3 bg-grass/10 text-grass rounded-lg text-sm">
             <p className="font-medium">{configLookup.config.name}</p>
             <p className="text-xs opacity-80">
-              {configLookup.config.wordBank.length} words | {configLookup.config.suggestedQuestions.length} questions
+              {configLookup.config.wordBank.length} words |{" "}
+              {configLookup.config.suggestedQuestions.length} questions
             </p>
           </div>
         )}
 
-        {configLookup.error && configCode.trim() && !configLookup.loading && (
+        {configLookup.error && !configLookup.loading && (
           <div className="mt-2 p-3 bg-paper-red/10 text-paper-red rounded-lg text-sm">
             {configLookup.error}
           </div>
@@ -178,7 +184,9 @@ export function CreateGameForm() {
               className="w-5 h-5 border-pencil/30 text-crayon-blue focus:ring-crayon-blue"
             />
             <div>
-              <span className="font-ui text-sm text-pencil">Local 2-Player Mode</span>
+              <span className="font-ui text-sm text-pencil">
+                Local 2-Player Mode
+              </span>
               <p className="font-ui text-xs text-pencil/60">
                 Ask questions in person - only submit word guesses
               </p>
@@ -195,7 +203,9 @@ export function CreateGameForm() {
               className="w-5 h-5 border-pencil/30 text-crayon-blue focus:ring-crayon-blue"
             />
             <div>
-              <span className="font-ui text-sm text-pencil">Shared Computer Mode</span>
+              <span className="font-ui text-sm text-pencil">
+                Shared Computer Mode
+              </span>
               <p className="font-ui text-xs text-pencil/60">
                 Both players share one computer and pass it between turns
               </p>
@@ -218,7 +228,9 @@ export function CreateGameForm() {
               className="w-5 h-5 rounded border-pencil/30 text-crayon-blue focus:ring-crayon-blue"
             />
             <div>
-              <span className="font-ui text-sm text-pencil">Random Secret Words</span>
+              <span className="font-ui text-sm text-pencil">
+                Random Secret Words
+              </span>
               <p className="font-ui text-xs text-pencil/60">
                 Automatically assign secret words (otherwise players choose)
               </p>
@@ -227,9 +239,15 @@ export function CreateGameForm() {
 
           <label
             className={`flex items-center gap-3 ${
-              showOnlyLastQuestionDisabled ? "cursor-not-allowed opacity-60" : "cursor-pointer"
+              showOnlyLastQuestionDisabled
+                ? "cursor-not-allowed opacity-60"
+                : "cursor-pointer"
             }`}
-            title={showOnlyLastQuestionDisabled ? "Unavailable in local or shared computer mode" : undefined}
+            title={
+              showOnlyLastQuestionDisabled
+                ? "Unavailable in local or shared computer mode"
+                : undefined
+            }
           >
             <input
               type="checkbox"
@@ -239,7 +257,9 @@ export function CreateGameForm() {
               className="w-5 h-5 rounded border-pencil/30 text-crayon-blue focus:ring-crayon-blue disabled:cursor-not-allowed disabled:opacity-50"
             />
             <div>
-              <span className="font-ui text-sm text-pencil">Show Only Last Question</span>
+              <span className="font-ui text-sm text-pencil">
+                Show Only Last Question
+              </span>
               <p className="font-ui text-xs text-pencil/60">
                 Only display the most recent question in the log
               </p>
