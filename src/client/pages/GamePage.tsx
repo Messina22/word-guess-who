@@ -13,7 +13,8 @@ import { WordSelectionScreen } from "@client/components/game/WordSelectionScreen
 export function GamePage() {
   const { code } = useParams<{ code: string }>();
   const navigate = useNavigate();
-  const { session, connected, error, isWaiting, isSelecting, isFinished } = useGameState();
+  const { session, connected, error, isWaiting, isSelecting, isFinished } =
+    useGameState();
   const { joinGame, leaveGame, clearError, joinedGameCodeRef } =
     useGameActions();
   const [hasJoined, setHasJoined] = useState(false);
@@ -45,7 +46,7 @@ export function GamePage() {
   useEffect(() => {
     if (session && code) {
       const myPlayer = session.players.find(
-        (p) => p.name === localStorage.getItem("playerName"),
+        (p) => p.name === localStorage.getItem("playerName")
       );
       if (myPlayer) {
         localStorage.setItem(`playerId_${code}`, myPlayer.id);
@@ -115,7 +116,7 @@ export function GamePage() {
       <div className="min-h-screen p-4 flex flex-col">
         <header className="text-center mb-8">
           <h1 className="font-display text-3xl text-pencil text-shadow">
-            Sight Word Guess Who
+            Word Guess Who
           </h1>
         </header>
         <main className="flex-1 flex items-center justify-center">
@@ -138,7 +139,7 @@ export function GamePage() {
       <div className="min-h-screen p-4 flex flex-col">
         <header className="text-center mb-8">
           <h1 className="font-display text-3xl text-pencil text-shadow">
-            Sight Word Guess Who
+            Word Guess Who
           </h1>
         </header>
         <main className="flex-1 flex items-center justify-center">
@@ -160,7 +161,7 @@ export function GamePage() {
     <div className="min-h-screen p-4">
       <header className="flex items-center justify-between mb-4">
         <h1 className="font-display text-2xl text-pencil text-shadow">
-          Sight Word Guess Who
+          Word Guess Who
         </h1>
         <button
           onClick={handleLeave}

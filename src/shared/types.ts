@@ -1,5 +1,5 @@
 /**
- * Core type definitions for Sight Word Guess Who
+ * Core type definitions for Word Guess Who
  */
 
 /** A single word entry in a word bank */
@@ -44,6 +44,9 @@ export interface GameConfig {
   wordBank: WordEntry[];
   suggestedQuestions: Question[];
   settings: GameSettings;
+  ownerId: string | null;
+  isSystemTemplate: boolean;
+  isPublic: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -72,8 +75,53 @@ export interface GameConfigRow {
   id: string;
   name: string;
   config_json: string;
+  owner_id: string | null;
+  is_system_template: number;
+  is_public: number;
   created_at: string;
   updated_at: string;
+}
+
+// ============================================
+// Instructor & Auth Types
+// ============================================
+
+/** Instructor account */
+export interface Instructor {
+  id: string;
+  email: string;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Database row representation of an instructor */
+export interface InstructorRow {
+  id: string;
+  email: string;
+  password_hash: string;
+  name: string;
+  created_at: string;
+  updated_at: string;
+}
+
+/** Auth response with instructor and token */
+export interface AuthResponse {
+  instructor: Instructor;
+  token: string;
+}
+
+/** Input for instructor registration */
+export interface RegisterInput {
+  email: string;
+  password: string;
+  name: string;
+}
+
+/** Input for instructor login */
+export interface LoginInput {
+  email: string;
+  password: string;
 }
 
 // ============================================

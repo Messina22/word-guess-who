@@ -1,4 +1,4 @@
-# Sight Word Guess Who - Project Plan
+# Word Guess Who - Project Plan
 
 ## Overview
 
@@ -27,15 +27,18 @@ A web-based educational game inspired by the classic "Guess Who" board game, but
 ### Game Rules & Behavior
 
 #### Grid Setup
+
 - **Both players see the same words in the same positions** on their game boards
 - The instructor selects which words from the word bank (up to 100 words) will appear in each game
 - Grid sizes: 12, 16, 20, or 24 cards depending on configuration
 
 #### Card Flipping
+
 - **Manual flipping only (MVP)**: Players tap/click cards to flip and eliminate words based on the answers they receive
 - Auto-evaluation (highlighting cards that match/don't match a question) is a **future enhancement**
 
 #### Turn Flow
+
 1. Player A asks a yes/no question about Player B's secret word
 2. Player B answers "yes" or "no"
 3. Player A manually flips cards to eliminate words
@@ -43,32 +46,36 @@ A web-based educational game inspired by the classic "Guess Who" board game, but
 5. Turn switches to Player B
 
 #### Reconnection
+
 - **Players can rejoin** a game in progress if they disconnect
 - Game state is preserved and restored upon reconnection
 - Players rejoin using the same game code and player name
 
 #### Game Room Lifecycle
+
 All game rooms expire after **20 minutes** in these scenarios:
+
 - Room created but second player never joins
 - Game completed (room persists briefly for rematch option)
 - Both players disconnect
 
 #### Configuration Visibility
+
 - Game configurations are **public**: all instructors can view configurations created by other instructors
 - Instructors **cannot edit** other instructors' configurations
 - Instructors can **copy/duplicate** configurations to create their own versions
 
 ## Tech Stack
 
-| Component | Technology |
-|-----------|------------|
-| Runtime | [Bun](https://bun.sh) |
-| Language | JavaScript/TypeScript |
-| Frontend Framework | React |
-| Backend/API | Bun's built-in HTTP server |
-| Real-time Communication | WebSockets (via Bun) |
-| Database | SQLite (via Bun's native SQLite support) |
-| Styling | Tailwind CSS |
+| Component               | Technology                               |
+| ----------------------- | ---------------------------------------- |
+| Runtime                 | [Bun](https://bun.sh)                    |
+| Language                | JavaScript/TypeScript                    |
+| Frontend Framework      | React                                    |
+| Backend/API             | Bun's built-in HTTP server               |
+| Real-time Communication | WebSockets (via Bun)                     |
+| Database                | SQLite (via Bun's native SQLite support) |
+| Styling                 | Tailwind CSS                             |
 
 ## Art Style
 
@@ -78,42 +85,42 @@ The game feels like a classroom bulletin board come to life—everything looks h
 
 ### Color Palette
 
-| Color | Hex | Usage |
-|-------|-----|-------|
-| **Construction Paper Red** | `#E63946` | Primary accent, important buttons |
-| **Crayon Blue** | `#457B9D` | Secondary accent, links |
-| **Sunshine Yellow** | `#FFD166` | Highlights, success states |
-| **Grass Green** | `#2A9D8F` | Correct/positive feedback |
-| **Grape Purple** | `#7B2CBF` | Player 2 accent |
-| **Tangerine Orange** | `#F77F00` | Warnings, turn indicators |
-| **Kraft Paper Brown** | `#C9B99A` | Card backgrounds, neutral elements |
-| **Cork Board Tan** | `#D4A574` | Main background texture |
-| **Lined Paper White** | `#FFFEF9` | Text areas, input fields |
-| **Pencil Gray** | `#5C5C5C` | Text, borders |
-| **Chalkboard Green** | `#2E5339` | Optional header/footer areas |
+| Color                      | Hex       | Usage                              |
+| -------------------------- | --------- | ---------------------------------- |
+| **Construction Paper Red** | `#E63946` | Primary accent, important buttons  |
+| **Crayon Blue**            | `#457B9D` | Secondary accent, links            |
+| **Sunshine Yellow**        | `#FFD166` | Highlights, success states         |
+| **Grass Green**            | `#2A9D8F` | Correct/positive feedback          |
+| **Grape Purple**           | `#7B2CBF` | Player 2 accent                    |
+| **Tangerine Orange**       | `#F77F00` | Warnings, turn indicators          |
+| **Kraft Paper Brown**      | `#C9B99A` | Card backgrounds, neutral elements |
+| **Cork Board Tan**         | `#D4A574` | Main background texture            |
+| **Lined Paper White**      | `#FFFEF9` | Text areas, input fields           |
+| **Pencil Gray**            | `#5C5C5C` | Text, borders                      |
+| **Chalkboard Green**       | `#2E5339` | Optional header/footer areas       |
 
 ### Visual Elements
 
-| Element | School Supply Inspiration |
-|---------|---------------------------|
-| **Word Cards** | Construction paper rectangles with slightly uneven "scissor-cut" edges |
-| **Card Backs** | Kraft paper with crayon scribble pattern |
-| **Buttons** | Rounded rectangles that look like erasers or sticky notes |
-| **Borders** | Dashed lines like scissors cutting guides, or wavy crayon strokes |
-| **Backgrounds** | Cork bulletin board texture with subtle push-pin holes |
-| **Dividers** | Strips of washi tape or masking tape |
-| **Icons** | Hand-drawn style (wobbly lines, imperfect shapes) |
-| **Decorations** | Gold star stickers, smiley faces, "Good Job!" stamps |
-| **Flipped Cards** | Look "pinned" to the board with a colored push-pin |
+| Element           | School Supply Inspiration                                              |
+| ----------------- | ---------------------------------------------------------------------- |
+| **Word Cards**    | Construction paper rectangles with slightly uneven "scissor-cut" edges |
+| **Card Backs**    | Kraft paper with crayon scribble pattern                               |
+| **Buttons**       | Rounded rectangles that look like erasers or sticky notes              |
+| **Borders**       | Dashed lines like scissors cutting guides, or wavy crayon strokes      |
+| **Backgrounds**   | Cork bulletin board texture with subtle push-pin holes                 |
+| **Dividers**      | Strips of washi tape or masking tape                                   |
+| **Icons**         | Hand-drawn style (wobbly lines, imperfect shapes)                      |
+| **Decorations**   | Gold star stickers, smiley faces, "Good Job!" stamps                   |
+| **Flipped Cards** | Look "pinned" to the board with a colored push-pin                     |
 
 ### Typography
 
-| Use | Font Suggestion | Style |
-|-----|-----------------|-------|
-| **Sight Words** | **Andika** or **Lexend** | Clear, dyslexia-friendly, easy for early readers |
-| **Headings** | **Patrick Hand** or **Caveat** | Looks like neat teacher handwriting |
-| **UI Labels** | **Nunito** or **Quicksand** | Rounded, friendly, readable |
-| **Fun Accents** | **Gaegu** or **Just Another Hand** | Crayon/marker feel for decorative text |
+| Use             | Font Suggestion                    | Style                                            |
+| --------------- | ---------------------------------- | ------------------------------------------------ |
+| **Sight Words** | **Andika** or **Lexend**           | Clear, dyslexia-friendly, easy for early readers |
+| **Headings**    | **Patrick Hand** or **Caveat**     | Looks like neat teacher handwriting              |
+| **UI Labels**   | **Nunito** or **Quicksand**        | Rounded, friendly, readable                      |
+| **Fun Accents** | **Gaegu** or **Just Another Hand** | Crayon/marker feel for decorative text           |
 
 ### Textures & Effects
 
@@ -126,32 +133,32 @@ The game feels like a classroom bulletin board come to life—everything looks h
 
 ### Card States
 
-| State | Visual Treatment |
-|-------|------------------|
-| **Active (face-up)** | Bright construction paper, word clearly visible, slight "popped up" shadow |
-| **Flipped (eliminated)** | Faded/grayed, rotated slightly, looks "pushed down" into the board |
-| **Hover** | Gentle wobble, paper lifting effect |
-| **Selected** | Gold star sticker appears in corner |
-| **Opponent's secret word** | Special "mystery" treatment with a question mark stamp |
+| State                      | Visual Treatment                                                           |
+| -------------------------- | -------------------------------------------------------------------------- |
+| **Active (face-up)**       | Bright construction paper, word clearly visible, slight "popped up" shadow |
+| **Flipped (eliminated)**   | Faded/grayed, rotated slightly, looks "pushed down" into the board         |
+| **Hover**                  | Gentle wobble, paper lifting effect                                        |
+| **Selected**               | Gold star sticker appears in corner                                        |
+| **Opponent's secret word** | Special "mystery" treatment with a question mark stamp                     |
 
 ### Animations
 
-| Action | Animation Style |
-|--------|-----------------|
-| **Card flip** | Paper folding effect, like turning a page |
-| **Correct guess** | Confetti of gold stars and smiley stickers |
-| **Wrong guess** | Gentle "eraser shake" wobble |
-| **Turn change** | Washi tape "slides" to indicate active player |
-| **Win celebration** | "A+" stamp animation, stickers flying |
+| Action              | Animation Style                               |
+| ------------------- | --------------------------------------------- |
+| **Card flip**       | Paper folding effect, like turning a page     |
+| **Correct guess**   | Confetti of gold stars and smiley stickers    |
+| **Wrong guess**     | Gentle "eraser shake" wobble                  |
+| **Turn change**     | Washi tape "slides" to indicate active player |
+| **Win celebration** | "A+" stamp animation, stickers flying         |
 
 ### Sound Design (Future Enhancement)
 
-| Action | Sound |
-|--------|-------|
-| Card flip | Paper rustling |
-| Button click | Stapler "chunk" |
+| Action         | Sound                                |
+| -------------- | ------------------------------------ |
+| Card flip      | Paper rustling                       |
+| Button click   | Stapler "chunk"                      |
 | Correct answer | Triangle ding (classroom instrument) |
-| Win | Children cheering / bell ringing |
+| Win            | Children cheering / bell ringing     |
 
 ## Architecture
 
@@ -308,7 +315,7 @@ interface Question {
   text: string;
 
   /** Category for organizing questions in UI */
-  category: 'letters' | 'sounds' | 'length' | 'patterns' | 'custom';
+  category: "letters" | "sounds" | "length" | "patterns" | "custom";
 
   /**
    * Optional: function name to auto-evaluate this question
@@ -526,7 +533,13 @@ interface GameSettings {
     },
     "settings": {
       "type": "object",
-      "required": ["gridSize", "allowCustomQuestions", "turnTimeLimit", "showPhoneticHints", "enableSounds"],
+      "required": [
+        "gridSize",
+        "allowCustomQuestions",
+        "turnTimeLimit",
+        "showPhoneticHints",
+        "enableSounds"
+      ],
       "properties": {
         "gridSize": { "type": "integer", "enum": [12, 16, 20, 24] },
         "allowCustomQuestions": { "type": "boolean" },
@@ -570,67 +583,72 @@ interface GameSettings {
 
 ### REST API
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/configs` | List all game configurations |
-| GET | `/api/configs/:id` | Get a specific configuration |
-| POST | `/api/configs` | Create a new configuration |
-| PUT | `/api/configs/:id` | Update a configuration |
-| DELETE | `/api/configs/:id` | Delete a configuration |
-| POST | `/api/games` | Create a new game session |
-| GET | `/api/games/:code` | Get game session info |
+| Method | Endpoint           | Description                  |
+| ------ | ------------------ | ---------------------------- |
+| GET    | `/api/configs`     | List all game configurations |
+| GET    | `/api/configs/:id` | Get a specific configuration |
+| POST   | `/api/configs`     | Create a new configuration   |
+| PUT    | `/api/configs/:id` | Update a configuration       |
+| DELETE | `/api/configs/:id` | Delete a configuration       |
+| POST   | `/api/games`       | Create a new game session    |
+| GET    | `/api/games/:code` | Get game session info        |
 
 ### WebSocket Events
 
 #### Client → Server
 
-| Event | Payload | Description |
-|-------|---------|-------------|
-| `join_game` | `{ gameCode, playerName }` | Join a game room |
-| `flip_card` | `{ wordIndex }` | Flip a card on player's board |
-| `ask_question` | `{ question }` | Ask a question |
-| `answer_question` | `{ answer: boolean }` | Answer yes/no |
-| `make_guess` | `{ word }` | Guess opponent's word |
+| Event             | Payload                    | Description                   |
+| ----------------- | -------------------------- | ----------------------------- |
+| `join_game`       | `{ gameCode, playerName }` | Join a game room              |
+| `flip_card`       | `{ wordIndex }`            | Flip a card on player's board |
+| `ask_question`    | `{ question }`             | Ask a question                |
+| `answer_question` | `{ answer: boolean }`      | Answer yes/no                 |
+| `make_guess`      | `{ word }`                 | Guess opponent's word         |
 
 #### Server → Client
 
-| Event | Payload | Description |
-|-------|---------|-------------|
-| `game_state` | `{ ...fullState }` | Full game state sync |
-| `player_joined` | `{ playerName }` | Another player joined |
-| `card_flipped` | `{ playerIndex, wordIndex }` | Card was flipped |
-| `question_asked` | `{ question }` | Question was asked |
-| `question_answered` | `{ answer }` | Question was answered |
-| `guess_made` | `{ word, correct }` | Guess result |
-| `game_over` | `{ winner }` | Game ended |
+| Event               | Payload                      | Description           |
+| ------------------- | ---------------------------- | --------------------- |
+| `game_state`        | `{ ...fullState }`           | Full game state sync  |
+| `player_joined`     | `{ playerName }`             | Another player joined |
+| `card_flipped`      | `{ playerIndex, wordIndex }` | Card was flipped      |
+| `question_asked`    | `{ question }`               | Question was asked    |
+| `question_answered` | `{ answer }`                 | Question was answered |
+| `guess_made`        | `{ word, correct }`          | Guess result          |
+| `game_over`         | `{ winner }`                 | Game ended            |
 
 ## Development Phases
 
 ### Phase 1: Foundation
+
 - Set up Bun project with TypeScript
 - Create basic server with HTTP endpoints
 - Implement config file loading/saving
 - Build config validation
 
 ### Phase 2: Game Logic
+
 - Implement core game engine
 - Create WebSocket session management
 - Build turn system and win detection
 - Develop question evaluation system
 
 ### Phase 3: Client UI
+
 - Create game board with card grid
 - Implement card flip animations
 - Build question/answer interface
 - Create game lobby and room joining
 
 ### Phase 4: Instructor Tools
+
 - Build configuration editor UI
 - Add word bank management
 - Create question builder
 - Implement config preview/testing
 
 ### Phase 5: Polish & Deploy
+
 - Add responsive design
 - Implement art style and theming
 - Add sound effects (optional)
@@ -642,6 +660,7 @@ interface GameSettings {
 ### Platform: Fly.io
 
 **Why Fly.io:**
+
 - Native WebSocket support (required for real-time gameplay)
 - Simple container deployments with `flyctl`
 - Persistent volumes for SQLite database
@@ -651,6 +670,7 @@ interface GameSettings {
 ### Database Persistence: Fly.io Volumes
 
 SQLite database is persisted using Fly.io Volumes:
+
 - Volume mounted at `/app/data`
 - Database file: `/app/data/game.db`
 - Survives deployments and machine restarts
@@ -673,11 +693,11 @@ We'll use **GitHub Actions** for continuous integration and deployment.
 
 #### CI Behavior
 
-| Check | Blocking? | Notes |
-|-------|-----------|-------|
-| Lint | No | Runs but doesn't fail the workflow |
-| Typecheck | No | Runs but doesn't fail the workflow |
-| Tests | **Yes** | Must pass to merge/deploy |
+| Check     | Blocking? | Notes                              |
+| --------- | --------- | ---------------------------------- |
+| Lint      | No        | Runs but doesn't fail the workflow |
+| Typecheck | No        | Runs but doesn't fail the workflow |
+| Tests     | **Yes**   | Must pass to merge/deploy          |
 
 #### Workflow Files
 
@@ -878,16 +898,16 @@ primary_region = "iad"
 
 ### Environment Variables
 
-| Variable | Description | Default | Required |
-|----------|-------------|---------|----------|
-| `PORT` | Server port | `3000` | No |
-| `NODE_ENV` | Environment mode | `development` | No |
-| `DATA_PATH` | Path to SQLite data directory | `data` | No |
+| Variable    | Description                   | Default       | Required |
+| ----------- | ----------------------------- | ------------- | -------- |
+| `PORT`      | Server port                   | `3000`        | No       |
+| `NODE_ENV`  | Environment mode              | `development` | No       |
+| `DATA_PATH` | Path to SQLite data directory | `data`        | No       |
 
 ### GitHub Secrets Required
 
-| Secret | Description | How to Get |
-|--------|-------------|------------|
+| Secret          | Description                      | How to Get                     |
+| --------------- | -------------------------------- | ------------------------------ |
 | `FLY_API_TOKEN` | Fly.io API token for deployments | Run `fly tokens create deploy` |
 
 ### Manual Setup Steps
@@ -939,33 +959,33 @@ fly deploy
 
 ### Files to Create
 
-| File | Description |
-|------|-------------|
-| `Dockerfile` | Multi-stage build for Bun application |
-| `.dockerignore` | Excludes unnecessary files from Docker build |
-| `fly.toml` | Fly.io deployment configuration |
-| `.github/workflows/ci.yml` | CI workflow (lint, typecheck, tests) |
-| `.github/workflows/deploy.yml` | Auto-deploy on merge to main |
+| File                           | Description                                  |
+| ------------------------------ | -------------------------------------------- |
+| `Dockerfile`                   | Multi-stage build for Bun application        |
+| `.dockerignore`                | Excludes unnecessary files from Docker build |
+| `fly.toml`                     | Fly.io deployment configuration              |
+| `.github/workflows/ci.yml`     | CI workflow (lint, typecheck, tests)         |
+| `.github/workflows/deploy.yml` | Auto-deploy on merge to main                 |
 
 ## Resolved Decisions
 
-| Decision | Resolution |
-|----------|------------|
-| Frontend Framework | React |
-| Styling | Tailwind CSS |
-| Database | SQLite |
-| Card Flipping | Manual (MVP), Auto-evaluation (future) |
-| Word Selection | Instructor chooses from word bank |
-| Grid Arrangement | Same words, same positions for both players |
-| Mobile Support | Future enhancement (not MVP) |
-| Reconnection | Players can rejoin with same game code |
-| Room Expiration | 20 minutes max in all scenarios |
-| Config Visibility | Public (view-only, no cross-editing) |
-| Art Style | Playful, kid-friendly with bright colors |
-| Player Count | 2 players (MVP), Team mode (future) |
-| Solo Practice | Future enhancement (AI opponent) |
-| Game Statistics | Future enhancement (post-MVP) |
+| Decision           | Resolution                                  |
+| ------------------ | ------------------------------------------- |
+| Frontend Framework | React                                       |
+| Styling            | Tailwind CSS                                |
+| Database           | SQLite                                      |
+| Card Flipping      | Manual (MVP), Auto-evaluation (future)      |
+| Word Selection     | Instructor chooses from word bank           |
+| Grid Arrangement   | Same words, same positions for both players |
+| Mobile Support     | Future enhancement (not MVP)                |
+| Reconnection       | Players can rejoin with same game code      |
+| Room Expiration    | 20 minutes max in all scenarios             |
+| Config Visibility  | Public (view-only, no cross-editing)        |
+| Art Style          | Playful, kid-friendly with bright colors    |
+| Player Count       | 2 players (MVP), Team mode (future)         |
+| Solo Practice      | Future enhancement (AI opponent)            |
+| Game Statistics    | Future enhancement (post-MVP)               |
 
 ---
 
-*Last updated: 2026-02-01*
+_Last updated: 2026-02-01_

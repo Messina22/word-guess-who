@@ -1,4 +1,4 @@
-# Sight Word Guess Who
+# Word Guess Who
 
 A web-based educational game inspired by the classic "Guess Who" board game, using sight words instead of character faces. Two players compete to guess each other's secret word by asking yes/no questions about letter patterns, sounds, and word characteristics.
 
@@ -63,32 +63,32 @@ bun run typecheck    # TypeScript type checking
 
 When creating a game, you can configure:
 
-| Option | Description |
-|--------|-------------|
-| **Word Set** | Choose which collection of sight words to use |
-| **Local 2-Player Mode** | Ask questions verbally, only submit guesses through the app |
-| **Show Only Last Question** | Display only the most recent question in the log |
-| **Random Secret Words** | Auto-assign secret words instead of letting players choose |
+| Option                      | Description                                                 |
+| --------------------------- | ----------------------------------------------------------- |
+| **Word Set**                | Choose which collection of sight words to use               |
+| **Local 2-Player Mode**     | Ask questions verbally, only submit guesses through the app |
+| **Show Only Last Question** | Display only the most recent question in the log            |
+| **Random Secret Words**     | Auto-assign secret words instead of letting players choose  |
 
 ## API Endpoints
 
 ### Configuration API
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/configs` | List all game configurations |
-| GET | `/api/configs/:id` | Get specific configuration |
-| POST | `/api/configs` | Create new configuration |
-| PUT | `/api/configs/:id` | Update configuration |
-| DELETE | `/api/configs/:id` | Delete configuration |
+| Method | Endpoint           | Description                  |
+| ------ | ------------------ | ---------------------------- |
+| GET    | `/api/configs`     | List all game configurations |
+| GET    | `/api/configs/:id` | Get specific configuration   |
+| POST   | `/api/configs`     | Create new configuration     |
+| PUT    | `/api/configs/:id` | Update configuration         |
+| DELETE | `/api/configs/:id` | Delete configuration         |
 
 ### Game Session API
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/games` | Create a new game session |
-| GET | `/api/games/:code` | Get game session by code |
-| WS | `/ws` | WebSocket connection for real-time gameplay |
+| Method | Endpoint           | Description                                 |
+| ------ | ------------------ | ------------------------------------------- |
+| POST   | `/api/games`       | Create a new game session                   |
+| GET    | `/api/games/:code` | Get game session by code                    |
+| WS     | `/ws`              | WebSocket connection for real-time gameplay |
 
 ## Project Structure
 
@@ -140,6 +140,7 @@ dist/                       # Production builds (gitignored)
 ## Art Style
 
 The UI features an "Elementary School Bulletin Board" aesthetic with:
+
 - Cork board background texture
 - Paper card styling with subtle shadows
 - Playful color palette (paper-red, crayon-blue, sunshine, grass, grape, tangerine)

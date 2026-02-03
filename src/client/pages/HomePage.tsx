@@ -7,10 +7,10 @@ export function HomePage() {
     <div className="min-h-screen p-4 sm:p-8">
       <header className="text-center mb-8 sm:mb-12">
         <h1 className="font-display text-4xl sm:text-5xl text-pencil mb-2 text-shadow">
-          Sight Word Guess Who
+          Word Guess Who
         </h1>
         <p className="font-ui text-pencil/70">
-          A two-player game for practicing sight words
+          A two-player game for practicing sight & spelling words
         </p>
         <div className="mt-4">
           <Link
@@ -68,7 +68,7 @@ export function HomePage() {
       </main>
 
       <footer className="text-center mt-12 text-pencil/50 text-sm">
-        <p>Made for learning sight words</p>
+        <p>Made for learning sight & spelling words</p>
         <p className="mt-1">
           Created by{" "}
           <a

@@ -1,5 +1,5 @@
 {
-  "id": "kindergarten-dolch-v1",
+  "id": "default",
   "name": "Kindergarten Dolch Sight Words",
   "description": "The classic Dolch sight word list for kindergarten, featuring 24 high-frequency words that young readers should recognize instantly.",
   "wordBank": [
@@ -40,13 +40,28 @@
     { "text": "Is your word three letters long?", "category": "length" },
     { "text": "Is your word more than three letters?", "category": "length" },
     { "text": "Does your word have a double letter?", "category": "patterns" },
-    { "text": "Does your word start with a tall letter (like 'l' or 'd')?", "category": "patterns" },
-    { "text": "Does your word have a letter that goes below the line (like 'g' or 'y')?", "category": "patterns" },
+    {
+      "text": "Does your word start with a tall letter (like 'l' or 'd')?",
+      "category": "patterns"
+    },
+    {
+      "text": "Does your word have a letter that goes below the line (like 'g' or 'y')?",
+      "category": "patterns"
+    },
     { "text": "Does your word rhyme with 'go'?", "category": "sounds" },
     { "text": "Does your word rhyme with 'see'?", "category": "sounds" },
-    { "text": "Does your word start with the same sound as 'sun'?", "category": "sounds" },
-    { "text": "Is your word something you can do (an action)?", "category": "meaning" },
-    { "text": "Is your word a person (like 'I' or 'you')?", "category": "meaning" }
+    {
+      "text": "Does your word start with the same sound as 'sun'?",
+      "category": "sounds"
+    },
+    {
+      "text": "Is your word something you can do (an action)?",
+      "category": "meaning"
+    },
+    {
+      "text": "Is your word a person (like 'I' or 'you')?",
+      "category": "meaning"
+    }
   ],
   "settings": {
     "gridSize": 24,

@@ -5,6 +5,8 @@ import type {
   GameSettings,
   Question,
   WordEntry,
+  RegisterInput,
+  LoginInput,
 } from "./types";
 
 /** Valid question categories */
@@ -154,4 +156,78 @@ export function generateIdFromName(name: string): string {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .substring(0, 50);
+}
+
+// ============================================
+// Auth Validation Schemas
+// ============================================
+
+/** Email validation schema */
+export const emailSchema = z
+  .string()
+  .email("Please enter a valid email address")
+  .max(255, "Email must be 255 characters or less");
+
+/** Password validation schema */
+export const passwordSchema = z
+  .string()
+  .min(8, "Password must be at least 8 characters")
+  .max(100, "Password must be 100 characters or less");
+
+/** Name validation schema for instructors */
+export const instructorNameSchema = z
+  .string()
+  .trim()
+  .min(1, "Name is required")
+  .max(100, "Name must be 100 characters or less");
+
+/** Schema for registration input */
+export const registerInputSchema = z.object({
+  email: emailSchema,
+  password: passwordSchema,
+  name: instructorNameSchema,
+});
+
+/** Schema for login input */
+export const loginInputSchema = z.object({
+  email: emailSchema,
+  password: z.string().min(1, "Password is required"),
+});
+
+/** Validate registration input */
+export function validateRegisterInput(data: unknown): {
+  success: true;
+  data: RegisterInput;
+} | {
+  success: false;
+  errors: string[];
+} {
+  const result = registerInputSchema.safeParse(data);
+  if (result.success) {
+    return { success: true, data: result.data };
+  }
+  const errors = result.error.errors.map((e) => {
+    const path = e.path.join(".");
+    return path ? `${path}: ${e.message}` : e.message;
+  });
+  return { success: false, errors };
+}
+
+/** Validate login input */
+export function validateLoginInput(data: unknown): {
+  success: true;
+  data: LoginInput;
+} | {
+  success: false;
+  errors: string[];
+} {
+  const result = loginInputSchema.safeParse(data);
+  if (result.success) {
+    return { success: true, data: result.data };
+  }
+  const errors = result.error.errors.map((e) => {
+    const path = e.path.join(".");
+    return path ? `${path}: ${e.message}` : e.message;
+  });
+  return { success: false, errors };
 }
