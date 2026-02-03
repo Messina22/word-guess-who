@@ -4,7 +4,11 @@ import { api } from "@client/lib/api";
 import { useAuth } from "@client/context/AuthContext";
 import { AuthModal } from "@client/components/auth/AuthModal";
 import { WordCard } from "@client/components/game/WordCard";
-import type { GameConfig, GameConfigInput, QuestionCategory } from "@shared/types";
+import type {
+  GameConfig,
+  GameConfigInput,
+  QuestionCategory,
+} from "@shared/types";
 import { generateIdFromName } from "@shared/validation";
 
 const questionCategories: QuestionCategory[] = [
@@ -31,20 +35,26 @@ function formatDate(value: string) {
   return date.toLocaleDateString();
 }
 
-function buildDraftFromConfig(config: GameConfig): GameConfigInput & { isPublic?: boolean } {
+function buildDraftFromConfig(
+  config: GameConfig
+): GameConfigInput & { isPublic?: boolean } {
   return {
     id: config.id,
     name: config.name,
     description: config.description,
     author: config.author,
     wordBank: config.wordBank.map((entry) => ({ ...entry })),
-    suggestedQuestions: config.suggestedQuestions.map((question) => ({ ...question })),
+    suggestedQuestions: config.suggestedQuestions.map((question) => ({
+      ...question,
+    })),
     settings: { ...config.settings },
     isPublic: config.isPublic,
   };
 }
 
-function createEmptyDraft(authorName?: string): GameConfigInput & { isPublic?: boolean } {
+function createEmptyDraft(
+  authorName?: string
+): GameConfigInput & { isPublic?: boolean } {
   return {
     name: "",
     description: "",
@@ -79,18 +89,27 @@ function normalizeDraft(
 }
 
 export function InstructorPage() {
-  const { instructor, isAuthenticated, isLoading: authLoading, logout } = useAuth();
+  const {
+    instructor,
+    isAuthenticated,
+    isLoading: authLoading,
+    logout,
+  } = useAuth();
 
   const [configs, setConfigs] = useState<GameConfig[]>([]);
   const [listLoading, setListLoading] = useState(true);
   const [listError, setListError] = useState<string | null>(null);
 
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const [authModalMode, setAuthModalMode] = useState<"login" | "register">("login");
+  const [authModalMode, setAuthModalMode] = useState<"login" | "register">(
+    "login"
+  );
 
   const [selectedConfigId, setSelectedConfigId] = useState<string | null>(null);
   const [draftSourceId, setDraftSourceId] = useState<string | null>(null);
-  const [draft, setDraft] = useState<(GameConfigInput & { isPublic?: boolean }) | null>(null);
+  const [draft, setDraft] = useState<
+    (GameConfigInput & { isPublic?: boolean }) | null
+  >(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -116,7 +135,9 @@ export function InstructorPage() {
   }, [activeConfig, instructor]);
 
   const isSystemTemplate = activeConfig?.isSystemTemplate ?? false;
-  const isReadOnly = Boolean(draftSourceId && activeConfig && (!isOwner || isSystemTemplate));
+  const isReadOnly = Boolean(
+    draftSourceId && activeConfig && (!isOwner || isSystemTemplate)
+  );
   const canEdit = !isReadOnly && isAuthenticated;
 
   const normalizedDraft = useMemo(
@@ -128,7 +149,8 @@ export function InstructorPage() {
     if (!normalizedDraft) {
       return 0;
     }
-    return normalizedDraft.wordBank.filter((entry) => entry.word.length > 0).length;
+    return normalizedDraft.wordBank.filter((entry) => entry.word.length > 0)
+      .length;
   }, [normalizedDraft]);
 
   const validationIssues = useMemo(() => {
@@ -139,7 +161,9 @@ export function InstructorPage() {
     if (!normalizedDraft.name) {
       issues.push("Name is required.");
     }
-    const emptyWords = normalizedDraft.wordBank.filter((entry) => !entry.word).length;
+    const emptyWords = normalizedDraft.wordBank.filter(
+      (entry) => !entry.word
+    ).length;
     if (wordCount < 12) {
       issues.push("Word bank needs at least 12 words.");
     }
@@ -162,7 +186,9 @@ export function InstructorPage() {
       issues.push("Remove or fill in empty questions.");
     }
     if (normalizedDraft.settings.gridSize > wordCount && wordCount > 0) {
-      issues.push(`Grid size (${normalizedDraft.settings.gridSize}) cannot exceed word count (${wordCount}).`);
+      issues.push(
+        `Grid size (${normalizedDraft.settings.gridSize}) cannot exceed word count (${wordCount}).`
+      );
     }
     if (normalizedDraft.settings.gridSize < 4) {
       issues.push("Grid size must be at least 4.");
@@ -190,7 +216,11 @@ export function InstructorPage() {
     if (response.success && response.data) {
       setConfigs(response.data);
     } else {
-      setListError(response.error || response.errors?.join(", ") || "Failed to load configs.");
+      setListError(
+        response.error ||
+          response.errors?.join(", ") ||
+          "Failed to load configs."
+      );
     }
     setListLoading(false);
   };
@@ -241,13 +271,17 @@ export function InstructorPage() {
     setSaveMessage(null);
   };
 
-  const updateDraft = (updates: Partial<GameConfigInput & { isPublic?: boolean }>) => {
+  const updateDraft = (
+    updates: Partial<GameConfigInput & { isPublic?: boolean }>
+  ) => {
     setDraft((current) => (current ? { ...current, ...updates } : current));
   };
 
   const updateSettings = (updates: Partial<GameConfigInput["settings"]>) => {
     setDraft((current) =>
-      current ? { ...current, settings: { ...current.settings, ...updates } } : current
+      current
+        ? { ...current, settings: { ...current.settings, ...updates } }
+        : current
     );
   };
 
@@ -269,7 +303,9 @@ export function InstructorPage() {
       }
       return {
         ...current,
-        wordBank: current.wordBank.filter((_, wordIndex) => wordIndex !== index),
+        wordBank: current.wordBank.filter(
+          (_, wordIndex) => wordIndex !== index
+        ),
       };
     });
   };
@@ -308,7 +344,10 @@ export function InstructorPage() {
     });
   };
 
-  const handleQuestionCategoryChange = (index: number, value: QuestionCategory) => {
+  const handleQuestionCategoryChange = (
+    index: number,
+    value: QuestionCategory
+  ) => {
     setDraft((current) => {
       if (!current) {
         return current;
@@ -421,7 +460,9 @@ export function InstructorPage() {
       setSaveMessage(draftSourceId ? "Config updated." : "Config created.");
     } else {
       setSaveError(
-        response.error || response.errors?.join(", ") || "Failed to save config."
+        response.error ||
+          response.errors?.join(", ") ||
+          "Failed to save config."
       );
     }
     setIsSaving(false);
@@ -448,7 +489,9 @@ export function InstructorPage() {
       await refreshConfigs();
     } else {
       setSaveError(
-        response.error || response.errors?.join(", ") || "Failed to delete config."
+        response.error ||
+          response.errors?.join(", ") ||
+          "Failed to delete config."
       );
     }
     setIsSaving(false);
@@ -516,13 +559,14 @@ export function InstructorPage() {
         {isAuthenticated && instructor && (
           <div className="paper-card p-4 mt-6">
             <p className="font-ui text-sm text-pencil">
-              Signed in as <strong>{instructor.name}</strong> ({instructor.email})
+              Signed in as <strong>{instructor.name}</strong> (
+              {instructor.email})
             </p>
           </div>
         )}
 
         {!isAuthenticated && (
-          <div className="paper-card p-4 mt-6 bg-sunshine/20">
+          <div className="paper-card p-4 mt-6">
             <p className="font-ui text-sm text-pencil">
               <button
                 type="button"
@@ -589,7 +633,10 @@ export function InstructorPage() {
 
           <div className="space-y-3 mt-4">
             {configs.map((config) => {
-              const isConfigOwner = isAuthenticated && instructor && config.ownerId === instructor.id;
+              const isConfigOwner =
+                isAuthenticated &&
+                instructor &&
+                config.ownerId === instructor.id;
               const isSelected = config.id === selectedConfigId;
               return (
                 <div
@@ -602,10 +649,12 @@ export function InstructorPage() {
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <h3 className="font-display text-lg text-pencil">{config.name}</h3>
+                      <h3 className="font-display text-lg text-pencil">
+                        {config.name}
+                      </h3>
                       <p className="text-xs text-pencil/60">
-                        {config.wordBank.length} words | {config.suggestedQuestions.length}{" "}
-                        questions
+                        {config.wordBank.length} words |{" "}
+                        {config.suggestedQuestions.length} questions
                       </p>
                       {config.isSystemTemplate && (
                         <span className="inline-block mt-1 px-2 py-0.5 text-xs bg-grape/20 text-grape rounded">
@@ -613,9 +662,13 @@ export function InstructorPage() {
                         </span>
                       )}
                       {isConfigOwner && (
-                        <span className={`inline-block mt-1 ml-1 px-2 py-0.5 text-xs rounded ${
-                          config.isPublic ? "bg-grass/20 text-grass" : "bg-kraft/40 text-pencil/70"
-                        }`}>
+                        <span
+                          className={`inline-block mt-1 ml-1 px-2 py-0.5 text-xs rounded ${
+                            config.isPublic
+                              ? "bg-grass/20 text-grass"
+                              : "bg-kraft/40 text-pencil/70"
+                          }`}
+                        >
                           {config.isPublic ? "Public" : "Private"}
                         </span>
                       )}
@@ -676,7 +729,9 @@ export function InstructorPage() {
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <h2 className="font-display text-2xl text-pencil">
-                      {draftSourceId ? "Edit Configuration" : "Create Configuration"}
+                      {draftSourceId
+                        ? "Edit Configuration"
+                        : "Create Configuration"}
                     </h2>
                     <p className="text-sm text-pencil/60">
                       {draftSourceId
@@ -698,7 +753,9 @@ export function InstructorPage() {
 
                 {draftSourceId && isOwner && (
                   <div className="mt-4 p-3 bg-paper-cream/50 rounded-lg">
-                    <p className="text-sm text-pencil/70 mb-1">Config Code (share with students):</p>
+                    <p className="text-sm text-pencil/70 mb-1">
+                      Config Code (share with students):
+                    </p>
                     <p className="font-mono text-lg text-pencil bg-white/50 px-3 py-2 rounded border border-kraft/30">
                       {draftSourceId}
                     </p>
@@ -730,23 +787,33 @@ export function InstructorPage() {
               </section>
 
               <section className="paper-card p-6">
-                <h3 className="font-display text-xl text-pencil mb-4">Basics</h3>
+                <h3 className="font-display text-xl text-pencil mb-4">
+                  Basics
+                </h3>
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
-                    <label htmlFor="configName" className="block font-ui text-sm text-pencil/70 mb-1">
+                    <label
+                      htmlFor="configName"
+                      className="block font-ui text-sm text-pencil/70 mb-1"
+                    >
                       Config Name
                     </label>
                     <input
                       id="configName"
                       type="text"
                       value={draft.name}
-                      onChange={(event) => updateDraft({ name: event.target.value })}
+                      onChange={(event) =>
+                        updateDraft({ name: event.target.value })
+                      }
                       className="input-field disabled:opacity-60 disabled:cursor-not-allowed"
                       disabled={isReadOnly}
                     />
                   </div>
                   <div>
-                    <label htmlFor="configId" className="block font-ui text-sm text-pencil/70 mb-1">
+                    <label
+                      htmlFor="configId"
+                      className="block font-ui text-sm text-pencil/70 mb-1"
+                    >
                       Config ID (Code)
                     </label>
                     <div className="flex gap-2">
@@ -754,7 +821,9 @@ export function InstructorPage() {
                         id="configId"
                         type="text"
                         value={draft.id ?? ""}
-                        onChange={(event) => updateDraft({ id: event.target.value })}
+                        onChange={(event) =>
+                          updateDraft({ id: event.target.value })
+                        }
                         className="input-field disabled:opacity-60 disabled:cursor-not-allowed"
                         disabled={isReadOnly || Boolean(draftSourceId)}
                         placeholder="Auto-generated if left blank"
@@ -772,7 +841,8 @@ export function InstructorPage() {
                     </div>
                     {draftSourceId && (
                       <p className="text-xs text-pencil/60 mt-1">
-                        IDs are locked for existing configs. Duplicate to change.
+                        IDs are locked for existing configs. Duplicate to
+                        change.
                       </p>
                     )}
                   </div>
@@ -787,7 +857,9 @@ export function InstructorPage() {
                   <textarea
                     id="configDescription"
                     value={draft.description ?? ""}
-                    onChange={(event) => updateDraft({ description: event.target.value })}
+                    onChange={(event) =>
+                      updateDraft({ description: event.target.value })
+                    }
                     className="input-field min-h-[100px] disabled:opacity-60 disabled:cursor-not-allowed"
                     disabled={isReadOnly}
                     placeholder="Describe the word set (optional)"
@@ -800,13 +872,18 @@ export function InstructorPage() {
                       <input
                         type="checkbox"
                         checked={draft.isPublic ?? false}
-                        onChange={(event) => updateDraft({ isPublic: event.target.checked })}
+                        onChange={(event) =>
+                          updateDraft({ isPublic: event.target.checked })
+                        }
                         className="w-5 h-5 rounded border-pencil/30 text-crayon-blue focus:ring-crayon-blue"
                       />
                       <div>
-                        <span className="font-ui text-sm text-pencil">Make this config public</span>
+                        <span className="font-ui text-sm text-pencil">
+                          Make this config public
+                        </span>
                         <p className="text-xs text-pencil/60">
-                          Public configs appear in the browse list. Private configs are only accessible via code.
+                          Public configs appear in the browse list. Private
+                          configs are only accessible via code.
                         </p>
                       </div>
                     </label>
@@ -816,13 +893,16 @@ export function InstructorPage() {
 
               <section className="paper-card p-6">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-4">
-                  <h3 className="font-display text-xl text-pencil">Word Bank</h3>
+                  <h3 className="font-display text-xl text-pencil">
+                    Word Bank
+                  </h3>
                   <span className="text-sm text-pencil/60">
                     {wordCount}/100 words
                   </span>
                 </div>
                 <p className="text-sm text-pencil/60 mb-4">
-                  Add between 12 and 100 sight words. Metadata fields can be added later.
+                  Add between 12 and 100 sight words. Metadata fields can be
+                  added later.
                 </p>
 
                 <div className="grid sm:grid-cols-2 gap-3">
@@ -831,7 +911,9 @@ export function InstructorPage() {
                       <input
                         type="text"
                         value={entry.word}
-                        onChange={(event) => handleWordChange(index, event.target.value)}
+                        onChange={(event) =>
+                          handleWordChange(index, event.target.value)
+                        }
                         className="input-field disabled:opacity-60 disabled:cursor-not-allowed"
                         disabled={isReadOnly}
                         placeholder={`Word ${index + 1}`}
@@ -858,7 +940,8 @@ export function InstructorPage() {
                   />
                   <div className="flex items-center justify-between">
                     <p className="text-xs text-pencil/60">
-                      One word per line. {100 - draft.wordBank.length} slots remaining.
+                      One word per line. {100 - draft.wordBank.length} slots
+                      remaining.
                     </p>
                     <button
                       type="button"
@@ -874,14 +957,16 @@ export function InstructorPage() {
 
               <section className="paper-card p-6">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-4">
-                  <h3 className="font-display text-xl text-pencil">Suggested Questions</h3>
+                  <h3 className="font-display text-xl text-pencil">
+                    Suggested Questions
+                  </h3>
                   <span className="text-sm text-pencil/60">
                     {draft.suggestedQuestions.length}/50 questions
                   </span>
                 </div>
                 <p className="text-sm text-pencil/60 mb-4">
-                  Add questions for players to ask. Categories help organize question
-                  types.
+                  Add questions for players to ask. Categories help organize
+                  question types.
                 </p>
 
                 <div className="space-y-3">
@@ -935,16 +1020,22 @@ export function InstructorPage() {
                     value={newQuestionText}
                     onChange={(event) => setNewQuestionText(event.target.value)}
                     className="input-field disabled:opacity-60 disabled:cursor-not-allowed"
-                    disabled={isReadOnly || draft.suggestedQuestions.length >= 50}
+                    disabled={
+                      isReadOnly || draft.suggestedQuestions.length >= 50
+                    }
                     placeholder="New question text"
                   />
                   <select
                     value={newQuestionCategory}
                     onChange={(event) =>
-                      setNewQuestionCategory(event.target.value as QuestionCategory)
+                      setNewQuestionCategory(
+                        event.target.value as QuestionCategory
+                      )
                     }
                     className="input-field disabled:opacity-60 disabled:cursor-not-allowed"
-                    disabled={isReadOnly || draft.suggestedQuestions.length >= 50}
+                    disabled={
+                      isReadOnly || draft.suggestedQuestions.length >= 50
+                    }
                   >
                     {questionCategories.map((category) => (
                       <option key={category} value={category}>
@@ -956,24 +1047,34 @@ export function InstructorPage() {
                     type="button"
                     onClick={handleAddQuestion}
                     className="btn-secondary text-sm py-2 px-4"
-                    disabled={isReadOnly || draft.suggestedQuestions.length >= 50}
+                    disabled={
+                      isReadOnly || draft.suggestedQuestions.length >= 50
+                    }
                   >
                     Add Question
                   </button>
                 </div>
 
                 <div className="border-t border-kraft/30 pt-4 mt-4">
-                  <p className="text-sm text-pencil/70 mb-2">Bulk Add Questions</p>
+                  <p className="text-sm text-pencil/70 mb-2">
+                    Bulk Add Questions
+                  </p>
                   <div className="flex flex-col gap-2">
                     <div className="flex items-center gap-2 mb-2">
-                      <label className="text-xs text-pencil/60">Default category:</label>
+                      <label className="text-xs text-pencil/60">
+                        Default category:
+                      </label>
                       <select
                         value={bulkQuestionCategory}
                         onChange={(event) =>
-                          setBulkQuestionCategory(event.target.value as QuestionCategory)
+                          setBulkQuestionCategory(
+                            event.target.value as QuestionCategory
+                          )
                         }
                         className="input-field text-sm py-1"
-                        disabled={isReadOnly || draft.suggestedQuestions.length >= 50}
+                        disabled={
+                          isReadOnly || draft.suggestedQuestions.length >= 50
+                        }
                       >
                         {questionCategories.map((cat) => (
                           <option key={cat} value={cat}>
@@ -986,8 +1087,12 @@ export function InstructorPage() {
                       value={bulkQuestions}
                       onChange={(event) => setBulkQuestions(event.target.value)}
                       className="input-field min-h-[100px] disabled:opacity-60 disabled:cursor-not-allowed"
-                      disabled={isReadOnly || draft.suggestedQuestions.length >= 50}
-                      placeholder={"Enter questions (one per line)\nDoes your word have the letter A?\nsounds: Does your word rhyme with cat?"}
+                      disabled={
+                        isReadOnly || draft.suggestedQuestions.length >= 50
+                      }
+                      placeholder={
+                        "Enter questions (one per line)\nDoes your word have the letter A?\nsounds: Does your word rhyme with cat?"
+                      }
                     />
                     <div className="flex items-center justify-between">
                       <p className="text-xs text-pencil/60">
@@ -998,7 +1103,9 @@ export function InstructorPage() {
                         type="button"
                         onClick={handleAddBulkQuestions}
                         className="btn-secondary text-sm py-2 px-4"
-                        disabled={isReadOnly || draft.suggestedQuestions.length >= 50}
+                        disabled={
+                          isReadOnly || draft.suggestedQuestions.length >= 50
+                        }
                       >
                         Add Questions
                       </button>
@@ -1008,7 +1115,9 @@ export function InstructorPage() {
               </section>
 
               <section className="paper-card p-6">
-                <h3 className="font-display text-xl text-pencil mb-4">Settings</h3>
+                <h3 className="font-display text-xl text-pencil mb-4">
+                  Settings
+                </h3>
                 <div className="max-w-xs">
                   <div>
                     <label
@@ -1024,7 +1133,10 @@ export function InstructorPage() {
                       max={100}
                       value={draft.settings.gridSize}
                       onChange={(event) => {
-                        const value = Math.max(4, Math.min(100, Number(event.target.value)));
+                        const value = Math.max(
+                          4,
+                          Math.min(100, Number(event.target.value))
+                        );
                         updateSettings({
                           gridSize: Number.isNaN(value) ? 24 : value,
                         });
@@ -1033,7 +1145,8 @@ export function InstructorPage() {
                       disabled={isReadOnly}
                     />
                     <p className="text-xs text-pencil/60 mt-1">
-                      Number of cards shown in the game (must have enough words in bank)
+                      Number of cards shown in the game (must have enough words
+                      in bank)
                     </p>
                   </div>
                 </div>
@@ -1044,24 +1157,32 @@ export function InstructorPage() {
                       type="checkbox"
                       checked={draft.settings.allowCustomQuestions}
                       onChange={(event) =>
-                        updateSettings({ allowCustomQuestions: event.target.checked })
+                        updateSettings({
+                          allowCustomQuestions: event.target.checked,
+                        })
                       }
                       className="w-5 h-5 rounded border-pencil/30 text-crayon-blue focus:ring-crayon-blue"
                       disabled={isReadOnly}
                     />
-                    <span className="font-ui text-sm text-pencil">Allow custom questions</span>
+                    <span className="font-ui text-sm text-pencil">
+                      Allow custom questions
+                    </span>
                   </label>
                   <label className="flex items-center gap-3 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={draft.settings.showPhoneticHints}
                       onChange={(event) =>
-                        updateSettings({ showPhoneticHints: event.target.checked })
+                        updateSettings({
+                          showPhoneticHints: event.target.checked,
+                        })
                       }
                       className="w-5 h-5 rounded border-pencil/30 text-crayon-blue focus:ring-crayon-blue"
                       disabled={isReadOnly}
                     />
-                    <span className="font-ui text-sm text-pencil">Show phonetic hints</span>
+                    <span className="font-ui text-sm text-pencil">
+                      Show phonetic hints
+                    </span>
                   </label>
                   <label className="flex items-center gap-3 cursor-pointer">
                     <input
@@ -1073,13 +1194,17 @@ export function InstructorPage() {
                       className="w-5 h-5 rounded border-pencil/30 text-crayon-blue focus:ring-crayon-blue"
                       disabled={isReadOnly}
                     />
-                    <span className="font-ui text-sm text-pencil">Enable sound effects</span>
+                    <span className="font-ui text-sm text-pencil">
+                      Enable sound effects
+                    </span>
                   </label>
                 </div>
               </section>
 
               <section className="paper-card p-6">
-                <h3 className="font-display text-xl text-pencil mb-4">Preview</h3>
+                <h3 className="font-display text-xl text-pencil mb-4">
+                  Preview
+                </h3>
                 {previewCards.length === 0 ? (
                   <p className="text-sm text-pencil/60">
                     Add words to preview the grid.
@@ -1087,7 +1212,8 @@ export function InstructorPage() {
                 ) : (
                   <>
                     <p className="text-sm text-pencil/60 mb-4">
-                      Showing {previewCards.length} of {draft.settings.gridSize} cards.
+                      Showing {previewCards.length} of {draft.settings.gridSize}{" "}
+                      cards.
                     </p>
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                       {previewCards.map((card) => (
@@ -1118,8 +1244,8 @@ export function InstructorPage() {
                       {isSaving
                         ? "Saving..."
                         : draftSourceId
-                        ? "Save Changes"
-                        : "Create Config"}
+                          ? "Save Changes"
+                          : "Create Config"}
                     </button>
                   )}
                   {draftSourceId && isOwner && !isSystemTemplate && (
