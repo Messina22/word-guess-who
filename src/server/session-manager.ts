@@ -1,5 +1,5 @@
 /**
- * WebSocket session manager for Sight Word Guess Who
+ * WebSocket session manager for Word Guess Who
  * Manages game rooms, player connections, and message broadcasting
  */
 
@@ -55,7 +55,7 @@ class SessionManager {
     isLocalMode: boolean = false,
     showOnlyLastQuestion: boolean = false,
     randomSecretWords: boolean = false,
-    sharedComputerMode: boolean = false,
+    sharedComputerMode: boolean = false
   ): Promise<GameSession | { error: string }> {
     const config = getConfig(configId);
     if (!config) {
@@ -80,7 +80,7 @@ class SessionManager {
       isLocalMode,
       showOnlyLastQuestion,
       randomSecretWords,
-      sharedComputerMode,
+      sharedComputerMode
     );
     session.code = gameCode; // Use the verified unique code
 
@@ -147,10 +147,14 @@ class SessionManager {
     const isReconnect = existingPlayerId && existingPlayerId === player.id;
 
     // In shared computer mode, automatically add a second player when the first player joins
-    if (room.session.sharedComputerMode && room.session.players.length === 1 && !isReconnect) {
+    if (
+      room.session.sharedComputerMode &&
+      room.session.players.length === 1 &&
+      !isReconnect
+    ) {
       const player2Name = `${playerName}'s Opponent`;
       const result2 = addPlayer(room.session, player2Name);
-      
+
       if (!("error" in result2)) {
         // Game phase will have transitioned to "selecting" or "playing" after second player added
         // Send updated game state to the first player with both players present
@@ -176,7 +180,11 @@ class SessionManager {
       });
 
       // If game just transitioned (second player joined), send updated state to first player
-      if ((room.session.phase === "playing" || room.session.phase === "selecting") && room.session.players.length === 2) {
+      if (
+        (room.session.phase === "playing" ||
+          room.session.phase === "selecting") &&
+        room.session.players.length === 2
+      ) {
         const firstPlayerSocket = room.sockets.get(room.session.players[0].id);
         if (firstPlayerSocket) {
           this.sendGameState(firstPlayerSocket, room.session, 0);
@@ -215,12 +223,20 @@ class SessionManager {
   }
 
   /** Handle incoming message from a player */
-  handleMessage(ws: ServerWebSocket<WebSocketData>, message: ClientMessage): void {
+  handleMessage(
+    ws: ServerWebSocket<WebSocketData>,
+    message: ClientMessage
+  ): void {
     const { gameCode, playerId, playerIndex } = ws.data;
 
     // Handle join separately (doesn't require existing game state)
     if (message.type === "join_game") {
-      this.handleJoin(ws, message.gameCode, message.playerName, message.playerId);
+      this.handleJoin(
+        ws,
+        message.gameCode,
+        message.playerName,
+        message.playerId
+      );
       return;
     }
 
@@ -257,7 +273,12 @@ class SessionManager {
         break;
 
       case "select_secret_word":
-        this.handleSelectSecretWord(room, playerId, message.cardIndex, message.forPlayerIndex);
+        this.handleSelectSecretWord(
+          room,
+          playerId,
+          message.cardIndex,
+          message.forPlayerIndex
+        );
         break;
 
       case "end_turn":
@@ -272,13 +293,18 @@ class SessionManager {
   }
 
   /** Handle card flip */
-  private handleFlipCard(room: GameRoom, playerId: string, cardIndex: number): void {
+  private handleFlipCard(
+    room: GameRoom,
+    playerId: string,
+    cardIndex: number
+  ): void {
     // In shared computer mode, flip card for whoever's turn it currently is
     // (the player viewing the board is the one who should own the flip)
     let effectivePlayerId = playerId;
     if (room.session.sharedComputerMode && room.session.gameState) {
       const currentTurnPlayerIndex = room.session.gameState.currentTurn;
-      effectivePlayerId = room.session.players[currentTurnPlayerIndex]?.id ?? playerId;
+      effectivePlayerId =
+        room.session.players[currentTurnPlayerIndex]?.id ?? playerId;
     }
 
     const result = flipCard(room.session, effectivePlayerId, cardIndex);
@@ -298,7 +324,11 @@ class SessionManager {
   }
 
   /** Handle asking a question */
-  private handleAskQuestion(room: GameRoom, playerId: string, question: string): void {
+  private handleAskQuestion(
+    room: GameRoom,
+    playerId: string,
+    question: string
+  ): void {
     const result = askQuestion(room.session, playerId, question);
 
     if (!result.success) {
@@ -316,7 +346,11 @@ class SessionManager {
   }
 
   /** Handle answering a question */
-  private handleAnswerQuestion(room: GameRoom, playerId: string, answer: boolean): void {
+  private handleAnswerQuestion(
+    room: GameRoom,
+    playerId: string,
+    answer: boolean
+  ): void {
     const result = answerQuestion(room.session, playerId, answer);
 
     if (!result.success) {
@@ -334,12 +368,17 @@ class SessionManager {
   }
 
   /** Handle making a guess */
-  private handleMakeGuess(room: GameRoom, playerId: string, word: string): void {
+  private handleMakeGuess(
+    room: GameRoom,
+    playerId: string,
+    word: string
+  ): void {
     // In shared computer mode, make guess for whoever's turn it currently is
     let effectivePlayerId = playerId;
     if (room.session.sharedComputerMode && room.session.gameState) {
       const currentTurnPlayerIndex = room.session.gameState.currentTurn;
-      effectivePlayerId = room.session.players[currentTurnPlayerIndex]?.id ?? playerId;
+      effectivePlayerId =
+        room.session.players[currentTurnPlayerIndex]?.id ?? playerId;
     }
 
     const result = makeGuess(room.session, effectivePlayerId, word);
@@ -385,7 +424,12 @@ class SessionManager {
     cardIndex: number,
     forPlayerIndex?: number
   ): void {
-    const result = selectSecretWord(room.session, playerId, cardIndex, forPlayerIndex);
+    const result = selectSecretWord(
+      room.session,
+      playerId,
+      cardIndex,
+      forPlayerIndex
+    );
 
     if (!result.success) {
       const socket = room.sockets.get(playerId);
@@ -398,7 +442,9 @@ class SessionManager {
     if (selectingSocket) {
       // In shared computer mode, always show as player 0's perspective
       // (since that's the only connected socket)
-      const viewAsPlayerIndex = room.session.sharedComputerMode ? 0 : result.playerIndex;
+      const viewAsPlayerIndex = room.session.sharedComputerMode
+        ? 0
+        : result.playerIndex;
       this.sendGameState(selectingSocket, room.session, viewAsPlayerIndex);
     }
 
@@ -442,7 +488,8 @@ class SessionManager {
     let effectivePlayerId = playerId;
     if (room.session.sharedComputerMode && room.session.gameState) {
       const currentTurnPlayerIndex = room.session.gameState.currentTurn;
-      effectivePlayerId = room.session.players[currentTurnPlayerIndex]?.id ?? playerId;
+      effectivePlayerId =
+        room.session.players[currentTurnPlayerIndex]?.id ?? playerId;
     }
 
     const result = endTurn(room.session, effectivePlayerId);
@@ -507,9 +554,10 @@ class SessionManager {
       pendingQuestion: session.gameState.pendingQuestion,
       awaitingAnswer: session.gameState.awaitingAnswer,
       winner: session.gameState.winner,
-      mySecretWord: player.secretWordIndex !== null
-        ? session.gameState.cards[player.secretWordIndex].word
-        : null,
+      mySecretWord:
+        player.secretWordIndex !== null
+          ? session.gameState.cards[player.secretWordIndex].word
+          : null,
       hasSelectedWord: player.hasSelectedWord,
       opponentHasSelected: opponent?.hasSelectedWord ?? false,
     };
@@ -523,7 +571,10 @@ class SessionManager {
   }
 
   /** Send a message to a single socket */
-  private send(ws: ServerWebSocket<WebSocketData>, message: ServerMessage): void {
+  private send(
+    ws: ServerWebSocket<WebSocketData>,
+    message: ServerMessage
+  ): void {
     try {
       ws.send(JSON.stringify(message));
     } catch {

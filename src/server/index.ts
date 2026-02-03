@@ -8,15 +8,8 @@ import {
   handleUpdateConfig,
   handleDeleteConfig,
 } from "./routes/api";
-import {
-  handleCreateGame,
-  handleGetGame,
-} from "./routes/game";
-import {
-  handleRegister,
-  handleLogin,
-  handleMe,
-} from "./routes/auth";
+import { handleCreateGame, handleGetGame } from "./routes/game";
+import { handleRegister, handleLogin, handleMe } from "./routes/auth";
 import { sessionManager, type WebSocketData } from "./session-manager";
 import type { ClientMessage } from "@shared/types";
 import { join } from "path";
@@ -32,7 +25,7 @@ const devIndexHtml = `<!DOCTYPE html>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sight Word Guess Who</title>
+  <title>Word Guess Who</title>
   <style>
     body {
       font-family: system-ui, -apple-system, sans-serif;
@@ -60,7 +53,7 @@ const devIndexHtml = `<!DOCTYPE html>
   </style>
 </head>
 <body>
-  <h1>Sight Word Guess Who</h1>
+  <h1>Word Guess Who</h1>
   <p>A two-player educational game for practicing sight words</p>
   <div class="status">Development Mode - Run <code>bun run dev:client</code> for the React UI</div>
   <div class="api-link">
@@ -109,7 +102,10 @@ function getContentType(path: string): string {
 }
 
 /** Route an incoming request */
-async function handleRequest(request: Request, server: ReturnType<typeof Bun.serve>): Promise<Response> {
+async function handleRequest(
+  request: Request,
+  server: ReturnType<typeof Bun.serve>
+): Promise<Response> {
   const url = new URL(request.url);
   const path = url.pathname;
   const method = request.method;
@@ -241,7 +237,9 @@ async function main() {
           const data = JSON.parse(message.toString()) as ClientMessage;
           sessionManager.handleMessage(ws, data);
         } catch {
-          ws.send(JSON.stringify({ type: "error", message: "Invalid message format" }));
+          ws.send(
+            JSON.stringify({ type: "error", message: "Invalid message format" })
+          );
         }
       },
       close(ws: ServerWebSocket<WebSocketData>) {

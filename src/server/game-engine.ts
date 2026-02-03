@@ -1,5 +1,5 @@
 /**
- * Core game engine for Sight Word Guess Who
+ * Core game engine for Word Guess Who
  * Manages game state, turns, and win detection
  */
 
@@ -46,11 +46,11 @@ function shuffleArray<T>(array: T[]): T[] {
 /** Select random words for the game board */
 export function selectWordsForGame(
   wordBank: WordEntry[],
-  gridSize: GridSize,
+  gridSize: GridSize
 ): CardState[] {
   if (wordBank.length < gridSize) {
     throw new Error(
-      `Word bank has ${wordBank.length} words but needs ${gridSize}`,
+      `Word bank has ${wordBank.length} words but needs ${gridSize}`
     );
   }
 
@@ -72,7 +72,7 @@ export function createGameSession(
   isLocalMode: boolean = false,
   showOnlyLastQuestion: boolean = false,
   randomSecretWords: boolean = false,
-  sharedComputerMode: boolean = false,
+  sharedComputerMode: boolean = false
 ): GameSession {
   const now = new Date();
   const expiresAt = new Date(now.getTime() + SESSION_TIMEOUT_MS);
@@ -104,14 +104,14 @@ export function createGameSession(
 export function addPlayer(
   session: GameSession,
   playerName: string,
-  existingPlayerId?: string,
+  existingPlayerId?: string
 ): { player: Player; playerIndex: number } | { error: string } {
   // Check if game is full
   if (session.players.length >= 2) {
     // Check for reconnection
     if (existingPlayerId) {
       const existingIndex = session.players.findIndex(
-        (p) => p.id === existingPlayerId,
+        (p) => p.id === existingPlayerId
       );
       if (existingIndex !== -1) {
         session.players[existingIndex].connected = true;
@@ -127,7 +127,7 @@ export function addPlayer(
   // Check for duplicate name
   if (
     session.players.some(
-      (p) => p.name.toLowerCase() === playerName.toLowerCase(),
+      (p) => p.name.toLowerCase() === playerName.toLowerCase()
     )
   ) {
     return { error: "Player name already taken" };
@@ -143,7 +143,7 @@ export function addPlayer(
   if (session.randomSecretWords) {
     // Assign secret word randomly (random card that isn't already assigned)
     const assignedIndices = new Set(
-      session.players.map((p) => p.secretWordIndex).filter((i) => i !== null),
+      session.players.map((p) => p.secretWordIndex).filter((i) => i !== null)
     );
     const availableIndices = session.gameState.cards
       .map((_, i) => i)
@@ -187,7 +187,7 @@ export function addPlayer(
 /** Mark a player as disconnected */
 export function disconnectPlayer(
   session: GameSession,
-  playerId: string,
+  playerId: string
 ): boolean {
   const player = session.players.find((p) => p.id === playerId);
   if (player) {
@@ -208,7 +208,7 @@ export function allPlayersDisconnected(session: GameSession): boolean {
 export function flipCard(
   session: GameSession,
   playerId: string,
-  cardIndex: number,
+  cardIndex: number
 ): { success: true; playerIndex: number } | { success: false; error: string } {
   const playerIndex = session.players.findIndex((p) => p.id === playerId);
   if (playerIndex === -1) {
@@ -247,7 +247,7 @@ export function flipCard(
 export function askQuestion(
   session: GameSession,
   playerId: string,
-  question: string,
+  question: string
 ): { success: true; playerIndex: number } | { success: false; error: string } {
   const playerIndex = session.players.findIndex((p) => p.id === playerId);
   if (playerIndex === -1) {
@@ -278,7 +278,7 @@ export function askQuestion(
 export function answerQuestion(
   session: GameSession,
   playerId: string,
-  answer: boolean,
+  answer: boolean
 ):
   | { success: true; playerIndex: number; answer: boolean }
   | { success: false; error: string } {
@@ -312,7 +312,7 @@ export function answerQuestion(
 export function makeGuess(
   session: GameSession,
   playerId: string,
-  guessedWord: string,
+  guessedWord: string
 ):
   | {
       success: true;
@@ -370,7 +370,7 @@ export function makeGuess(
 /** End turn without guessing (pass) */
 export function endTurn(
   session: GameSession,
-  playerId: string,
+  playerId: string
 ): { success: true; nextTurn: number } | { success: false; error: string } {
   const playerIndex = session.players.findIndex((p) => p.id === playerId);
   if (playerIndex === -1) {
@@ -403,7 +403,7 @@ export function isSessionExpired(session: GameSession): boolean {
 /** Extend session expiration (e.g., when game starts or player reconnects) */
 export function extendSession(
   session: GameSession,
-  minutes: number = SESSION_TIMEOUT_MINUTES,
+  minutes: number = SESSION_TIMEOUT_MINUTES
 ): void {
   const newExpiry = new Date(Date.now() + minutes * 60 * 1000);
   session.expiresAt = newExpiry.toISOString();
@@ -414,7 +414,7 @@ export function selectSecretWord(
   session: GameSession,
   playerId: string,
   cardIndex: number,
-  forPlayerIndex?: number,
+  forPlayerIndex?: number
 ):
   | { success: true; playerIndex: number; bothSelected: boolean }
   | { success: false; error: string } {
@@ -457,7 +457,10 @@ export function selectSecretWord(
   const otherPlayerIndex = targetPlayerIndex === 0 ? 1 : 0;
   const otherPlayer = session.players[otherPlayerIndex];
   if (otherPlayer && otherPlayer.secretWordIndex === cardIndex) {
-    return { success: false, error: "This word is already taken by the other player" };
+    return {
+      success: false,
+      error: "This word is already taken by the other player",
+    };
   }
 
   // Assign the word
@@ -476,7 +479,7 @@ export function selectSecretWord(
 /** Get the secret word for a player */
 export function getPlayerSecretWord(
   session: GameSession,
-  playerIndex: number,
+  playerIndex: number
 ): string | null {
   const player = session.players[playerIndex];
   if (!player || !session.gameState || player.secretWordIndex === null) {

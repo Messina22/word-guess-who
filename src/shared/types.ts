@@ -1,5 +1,5 @@
 /**
- * Core type definitions for Sight Word Guess Who
+ * Core type definitions for Word Guess Who
  */
 
 /** A single word entry in a word bank */
