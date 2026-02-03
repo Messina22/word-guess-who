@@ -24,9 +24,10 @@ function rowToInstructor(row: InstructorRow): Instructor {
 export function emailExists(email: string): boolean {
   const db = getDb();
   const row = db
-    .query<{ count: number }, [string]>(
-      "SELECT COUNT(*) as count FROM instructors WHERE LOWER(email) = LOWER(?)"
-    )
+    .query<
+      { count: number },
+      [string]
+    >("SELECT COUNT(*) as count FROM instructors WHERE LOWER(email) = LOWER(?)")
     .get(email);
   return (row?.count ?? 0) > 0;
 }
@@ -39,19 +40,34 @@ export async function createInstructor(
 > {
   // Check for duplicate email
   if (emailExists(input.email)) {
-    return { success: false, error: "An account with this email already exists" };
+    return {
+      success: false,
+      error: "An account with this email already exists",
+    };
   }
 
   const id = nanoid();
   const passwordHash = await hashPassword(input.password);
   const now = new Date().toISOString();
 
-  const db = getDb();
-  db.run(
-    `INSERT INTO instructors (id, email, password_hash, name, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?)`,
-    [id, input.email.toLowerCase(), passwordHash, input.name, now, now]
-  );
+  try {
+    const db = getDb();
+    db.run(
+      `INSERT INTO instructors (id, email, password_hash, name, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [id, input.email.toLowerCase(), passwordHash, input.name, now, now]
+    );
+  } catch (error) {
+    console.error("Database error creating instructor:", error);
+    // Check for UNIQUE constraint violation (race condition)
+    if (error instanceof Error && error.message.includes("UNIQUE")) {
+      return {
+        success: false,
+        error: "An account with this email already exists",
+      };
+    }
+    throw error; // Re-throw other errors to be caught by route handler
+  }
 
   const instructor: Instructor = {
     id,

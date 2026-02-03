@@ -40,12 +40,23 @@ export async function handleRegister(request: Request): Promise<Response> {
     );
   }
 
-  const result = await createInstructor(validation.data);
-  if (!result.success) {
-    return jsonResponse<null>({ success: false, error: result.error }, 400);
-  }
+  try {
+    const result = await createInstructor(validation.data);
+    if (!result.success) {
+      return jsonResponse<null>({ success: false, error: result.error }, 400);
+    }
 
-  return jsonResponse<AuthResponse>({ success: true, data: result.data }, 201);
+    return jsonResponse<AuthResponse>(
+      { success: true, data: result.data },
+      201
+    );
+  } catch (error) {
+    console.error("Registration error:", error);
+    return jsonResponse<null>(
+      { success: false, error: "Failed to create account. Please try again." },
+      500
+    );
+  }
 }
 
 /** POST /api/auth/login - Authenticate and return token */
@@ -68,12 +79,20 @@ export async function handleLogin(request: Request): Promise<Response> {
     );
   }
 
-  const result = await authenticateInstructor(validation.data);
-  if (!result.success) {
-    return jsonResponse<null>({ success: false, error: result.error }, 401);
-  }
+  try {
+    const result = await authenticateInstructor(validation.data);
+    if (!result.success) {
+      return jsonResponse<null>({ success: false, error: result.error }, 401);
+    }
 
-  return jsonResponse<AuthResponse>({ success: true, data: result.data });
+    return jsonResponse<AuthResponse>({ success: true, data: result.data });
+  } catch (error) {
+    console.error("Login error:", error);
+    return jsonResponse<null>(
+      { success: false, error: "Login failed. Please try again." },
+      500
+    );
+  }
 }
 
 /** GET /api/auth/me - Get current instructor profile */
