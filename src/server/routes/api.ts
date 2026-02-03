@@ -1,4 +1,4 @@
-import type { ApiResponse, GameConfig, Instructor } from "@shared/types";
+import type { GameConfig, Instructor } from "@shared/types";
 import {
   listConfigs,
   listPublicConfigs,
@@ -9,19 +9,7 @@ import {
 } from "../config-manager";
 import { extractTokenFromHeader, verifyToken } from "../auth";
 import { getInstructorById } from "../instructor-manager";
-
-/** Create a JSON response with proper headers */
-function jsonResponse<T>(data: ApiResponse<T>, status = 200): Response {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: {
-      "Content-Type": "application/json",
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type, Authorization",
-    },
-  });
-}
+import { jsonResponse } from "../utils/response";
 
 /** Handle OPTIONS preflight requests */
 export function handleOptions(): Response {

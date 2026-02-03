@@ -78,7 +78,7 @@ export function configExists(id: string): boolean {
 
 /** Create a new game configuration */
 export function createConfig(
-  input: GameConfigInput,
+  input: GameConfigInput & { isPublic?: boolean },
   ownerId?: string,
   isSystemTemplate = false
 ): { success: true; data: GameConfig } | { success: false; errors: string[] } {
@@ -103,7 +103,8 @@ export function createConfig(
   }
 
   const now = new Date().toISOString();
-  const isPublic = isSystemTemplate; // System templates are always public
+  // System templates are always public; user configs respect the provided isPublic value
+  const isPublic = isSystemTemplate ? true : (input.isPublic ?? false);
 
   const config: GameConfig = {
     ...validInput,
@@ -172,10 +173,12 @@ export function updateConfig(
 
   const now = new Date().toISOString();
   const isPublic = typeof input.isPublic === "boolean" ? input.isPublic : existing.isPublic;
+  const author = validInput.author ?? existing.author;
 
   const config: GameConfig = {
     ...validInput,
     id: newId,
+    author,
     ownerId: existing.ownerId,
     isSystemTemplate: existing.isSystemTemplate,
     isPublic,
