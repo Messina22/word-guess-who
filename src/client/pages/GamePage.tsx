@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useGameState } from "@client/hooks/useGameState";
 import { useGameActions } from "@client/hooks/useGameActions";
+import { useSessionGameLog } from "@client/context/SessionGameLogContext";
 import { GameBoard } from "@client/components/game/GameBoard";
 import { QuestionPanel } from "@client/components/game/QuestionPanel";
 import { QuestionLog } from "@client/components/game/QuestionLog";
@@ -13,11 +14,21 @@ import { WordSelectionScreen } from "@client/components/game/WordSelectionScreen
 export function GamePage() {
   const { code } = useParams<{ code: string }>();
   const navigate = useNavigate();
-  const { session, connected, error, isWaiting, isSelecting, isFinished } =
-    useGameState();
+  const {
+    session,
+    connected,
+    error,
+    isWaiting,
+    isSelecting,
+    isFinished,
+    iWon,
+    opponent,
+  } = useGameState();
   const { joinGame, leaveGame, clearError, joinedGameCodeRef } =
     useGameActions();
+  const { addGameResult } = useSessionGameLog();
   const [hasJoined, setHasJoined] = useState(false);
+  const gameResultRecordedRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!code) {
@@ -53,6 +64,14 @@ export function GamePage() {
       }
     }
   }, [session, code]);
+
+  // Record game result when game finishes
+  useEffect(() => {
+    if (isFinished && opponent && code && gameResultRecordedRef.current !== code) {
+      gameResultRecordedRef.current = code;
+      addGameResult(opponent.name, iWon);
+    }
+  }, [isFinished, opponent, code, iWon, addGameResult]);
 
   const handleLeave = () => {
     leaveGame();

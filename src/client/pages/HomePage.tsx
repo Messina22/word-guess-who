@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { CreateGameForm } from "@client/components/lobby/CreateGameForm";
 import { JoinGameForm } from "@client/components/lobby/JoinGameForm";
+import { GameSessionLog } from "@client/components/lobby/GameSessionLog";
 
 export function HomePage() {
   return (
@@ -25,7 +26,16 @@ export function HomePage() {
       <main className="max-w-4xl mx-auto">
         <div className="grid md:grid-cols-2 gap-6 sm:gap-8">
           <CreateGameForm />
-          <JoinGameForm />
+          <div className="hidden md:flex flex-col gap-6">
+            <JoinGameForm />
+            <div className="flex-1">
+              <GameSessionLog />
+            </div>
+          </div>
+          {/* Mobile: show only JoinGameForm without the session log */}
+          <div className="md:hidden">
+            <JoinGameForm />
+          </div>
         </div>
 
         <section className="mt-12 paper-card p-6">
