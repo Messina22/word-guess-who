@@ -12,6 +12,11 @@ import {
   handleCreateGame,
   handleGetGame,
 } from "./routes/game";
+import {
+  handleRegister,
+  handleLogin,
+  handleMe,
+} from "./routes/auth";
 import { sessionManager, type WebSocketData } from "./session-manager";
 import type { ClientMessage } from "@shared/types";
 import { join } from "path";
@@ -155,10 +160,21 @@ async function handleRequest(request: Request, server: ReturnType<typeof Bun.ser
     });
   }
 
+  // Auth API routes
+  if (path === "/api/auth/register" && method === "POST") {
+    return handleRegister(request);
+  }
+  if (path === "/api/auth/login" && method === "POST") {
+    return handleLogin(request);
+  }
+  if (path === "/api/auth/me" && method === "GET") {
+    return handleMe(request);
+  }
+
   // Config API routes
   if (path === "/api/configs") {
     if (method === "GET") {
-      return handleListConfigs();
+      return handleListConfigs(request);
     }
     if (method === "POST") {
       return handleCreateConfig(request);

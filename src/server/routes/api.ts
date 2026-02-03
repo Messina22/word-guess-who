@@ -1,11 +1,14 @@
-import type { ApiResponse, GameConfig } from "@shared/types";
+import type { ApiResponse, GameConfig, Instructor } from "@shared/types";
 import {
   listConfigs,
+  listPublicConfigs,
   getConfig,
   createConfig,
   updateConfig,
   deleteConfig,
 } from "../config-manager";
+import { extractTokenFromHeader, verifyToken } from "../auth";
+import { getInstructorById } from "../instructor-manager";
 
 /** Create a JSON response with proper headers */
 function jsonResponse<T>(data: ApiResponse<T>, status = 200): Response {
@@ -15,7 +18,7 @@ function jsonResponse<T>(data: ApiResponse<T>, status = 200): Response {
       "Content-Type": "application/json",
       "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization",
     },
   });
 }
@@ -27,14 +30,34 @@ export function handleOptions(): Response {
     headers: {
       "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization",
     },
   });
 }
 
-/** GET /api/configs - List all configurations */
-export function handleListConfigs(): Response {
-  const configs = listConfigs();
+/** Extract instructor from request (returns null if not authenticated) */
+async function getInstructorFromRequest(
+  request: Request
+): Promise<Instructor | null> {
+  const authHeader = request.headers.get("Authorization");
+  const token = extractTokenFromHeader(authHeader);
+  if (!token) return null;
+
+  const payload = await verifyToken(token);
+  if (!payload) return null;
+
+  return getInstructorById(payload.instructorId);
+}
+
+/** GET /api/configs - List public configurations and system templates */
+export async function handleListConfigs(request: Request): Promise<Response> {
+  const instructor = await getInstructorFromRequest(request);
+
+  // If authenticated, include instructor's own configs too
+  const configs = instructor
+    ? listConfigs(instructor.id)
+    : listPublicConfigs();
+
   return jsonResponse<GameConfig[]>({ success: true, data: configs });
 }
 
@@ -50,8 +73,16 @@ export function handleGetConfig(id: string): Response {
   return jsonResponse<GameConfig>({ success: true, data: config });
 }
 
-/** POST /api/configs - Create a new configuration */
+/** POST /api/configs - Create a new configuration (requires auth) */
 export async function handleCreateConfig(request: Request): Promise<Response> {
+  const instructor = await getInstructorFromRequest(request);
+  if (!instructor) {
+    return jsonResponse<null>(
+      { success: false, error: "Authentication required" },
+      401
+    );
+  }
+
   let body: unknown;
   try {
     body = await request.json();
@@ -62,7 +93,7 @@ export async function handleCreateConfig(request: Request): Promise<Response> {
     );
   }
 
-  const result = createConfig(body as any);
+  const result = createConfig(body as any, instructor.id);
   if (!result.success) {
     return jsonResponse<null>(
       { success: false, errors: result.errors },
@@ -73,11 +104,42 @@ export async function handleCreateConfig(request: Request): Promise<Response> {
   return jsonResponse<GameConfig>({ success: true, data: result.data }, 201);
 }
 
-/** PUT /api/configs/:id - Update a configuration */
+/** PUT /api/configs/:id - Update a configuration (requires auth + ownership) */
 export async function handleUpdateConfig(
   id: string,
   request: Request
 ): Promise<Response> {
+  const instructor = await getInstructorFromRequest(request);
+  if (!instructor) {
+    return jsonResponse<null>(
+      { success: false, error: "Authentication required" },
+      401
+    );
+  }
+
+  // Check ownership before parsing body
+  const existing = getConfig(id);
+  if (!existing) {
+    return jsonResponse<null>(
+      { success: false, error: `Config '${id}' not found` },
+      404
+    );
+  }
+
+  if (existing.isSystemTemplate) {
+    return jsonResponse<null>(
+      { success: false, error: "System templates cannot be modified" },
+      403
+    );
+  }
+
+  if (existing.ownerId !== instructor.id) {
+    return jsonResponse<null>(
+      { success: false, error: "You do not have permission to edit this configuration" },
+      403
+    );
+  }
+
   let body: unknown;
   try {
     body = await request.json();
@@ -88,9 +150,8 @@ export async function handleUpdateConfig(
     );
   }
 
-  const result = updateConfig(id, body as any);
+  const result = updateConfig(id, body as any, instructor.id);
   if (!result.success) {
-    // Determine if it's a 404 or validation error
     const is404 = result.errors.some((e) => e.includes("not found"));
     return jsonResponse<null>(
       { success: false, errors: result.errors },
@@ -101,27 +162,46 @@ export async function handleUpdateConfig(
   return jsonResponse<GameConfig>({ success: true, data: result.data });
 }
 
-/** DELETE /api/configs/:id - Delete a configuration */
+/** DELETE /api/configs/:id - Delete a configuration (requires auth + ownership) */
 export async function handleDeleteConfig(
   id: string,
   request: Request
 ): Promise<Response> {
-  let requestingAuthor: string | undefined;
-  try {
-    const body = await request.json();
-    requestingAuthor = body?.author;
-  } catch {
-    // No body or invalid JSON is acceptable, but author won't be provided
-  }
-
-  const result = deleteConfig(id, requestingAuthor);
-  if (!result.success) {
-    const is404 = result.error.includes("not found");
-    const isForbidden = result.error.includes("permission");
+  const instructor = await getInstructorFromRequest(request);
+  if (!instructor) {
     return jsonResponse<null>(
-      { success: false, error: result.error },
-      is404 ? 404 : isForbidden ? 403 : 400
+      { success: false, error: "Authentication required" },
+      401
     );
   }
+
+  // Check ownership
+  const existing = getConfig(id);
+  if (!existing) {
+    return jsonResponse<null>(
+      { success: false, error: `Config '${id}' not found` },
+      404
+    );
+  }
+
+  if (existing.isSystemTemplate) {
+    return jsonResponse<null>(
+      { success: false, error: "System templates cannot be deleted" },
+      403
+    );
+  }
+
+  if (existing.ownerId !== instructor.id) {
+    return jsonResponse<null>(
+      { success: false, error: "You do not have permission to delete this configuration" },
+      403
+    );
+  }
+
+  const result = deleteConfig(id, instructor.id);
+  if (!result.success) {
+    return jsonResponse<null>({ success: false, error: result.error }, 400);
+  }
+
   return jsonResponse<null>({ success: true });
 }

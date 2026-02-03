@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "@client/lib/api";
 import type { GameConfig } from "@shared/types";
@@ -7,8 +7,12 @@ type GameMode = "online" | "local" | "shared";
 
 export function CreateGameForm() {
   const navigate = useNavigate();
-  const [configs, setConfigs] = useState<GameConfig[]>([]);
-  const [selectedConfig, setSelectedConfig] = useState("");
+  const [configCode, setConfigCode] = useState("");
+  const [configLookup, setConfigLookup] = useState<{
+    loading: boolean;
+    config: GameConfig | null;
+    error: string | null;
+  }>({ loading: false, config: null, error: null });
   const [playerName, setPlayerName] = useState("");
   const [gameMode, setGameMode] = useState<GameMode>("online");
   const [showOnlyLastQuestion, setShowOnlyLastQuestion] = useState(false);
@@ -23,16 +27,34 @@ export function CreateGameForm() {
   // Show Only Last Question is disabled for local game modes
   const showOnlyLastQuestionDisabled = gameMode !== "online";
 
-  useEffect(() => {
-    api.configs.list().then((response) => {
-      if (response.success && response.data) {
-        setConfigs(response.data);
-        if (response.data.length > 0) {
-          setSelectedConfig(response.data[0].id);
-        }
-      }
-    });
+  // Debounced config lookup
+  const lookupConfig = useCallback(async (code: string) => {
+    if (!code.trim()) {
+      setConfigLookup({ loading: false, config: null, error: null });
+      return;
+    }
+
+    setConfigLookup({ loading: true, config: null, error: null });
+
+    const response = await api.configs.get(code.trim());
+    if (response.success && response.data) {
+      setConfigLookup({ loading: false, config: response.data, error: null });
+    } else {
+      setConfigLookup({
+        loading: false,
+        config: null,
+        error: response.error || "Config not found",
+      });
+    }
   }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      lookupConfig(configCode);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [configCode, lookupConfig]);
 
   // Reset showOnlyLastQuestion when switching to a local mode
   useEffect(() => {
@@ -43,13 +65,13 @@ export function CreateGameForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedConfig || !playerName.trim()) return;
+    if (!configLookup.config || !playerName.trim()) return;
 
     setLoading(true);
     setError(null);
 
     const response = await api.games.create({
-      configId: selectedConfig,
+      configId: configLookup.config.id,
       isLocalMode,
       showOnlyLastQuestion: showOnlyLastQuestionDisabled ? false : showOnlyLastQuestion,
       randomSecretWords,
@@ -87,22 +109,40 @@ export function CreateGameForm() {
       </div>
 
       <div className="mb-4">
-        <label htmlFor="config" className="block font-ui text-sm text-pencil/70 mb-1">
-          Word Set
+        <label htmlFor="configCode" className="block font-ui text-sm text-pencil/70 mb-1">
+          Config Code
         </label>
-        <select
-          id="config"
-          value={selectedConfig}
-          onChange={(e) => setSelectedConfig(e.target.value)}
+        <input
+          id="configCode"
+          type="text"
+          value={configCode}
+          onChange={(e) => setConfigCode(e.target.value)}
+          placeholder="Enter the code from your instructor"
           className="input-field"
           required
-        >
-          {configs.map((config) => (
-            <option key={config.id} value={config.id}>
-              {config.name} ({config.wordBank.length} words)
-            </option>
-          ))}
-        </select>
+        />
+        <p className="text-xs text-pencil/60 mt-1">
+          Ask your instructor for the config code, or use "default" for the built-in word set.
+        </p>
+
+        {configLookup.loading && (
+          <p className="text-xs text-pencil/60 mt-2">Looking up config...</p>
+        )}
+
+        {configLookup.config && (
+          <div className="mt-2 p-3 bg-grass/10 text-grass rounded-lg text-sm">
+            <p className="font-medium">{configLookup.config.name}</p>
+            <p className="text-xs opacity-80">
+              {configLookup.config.wordBank.length} words | {configLookup.config.suggestedQuestions.length} questions
+            </p>
+          </div>
+        )}
+
+        {configLookup.error && configCode.trim() && !configLookup.loading && (
+          <div className="mt-2 p-3 bg-paper-red/10 text-paper-red rounded-lg text-sm">
+            {configLookup.error}
+          </div>
+        )}
       </div>
 
       {/* Game Mode Section */}
@@ -216,7 +256,7 @@ export function CreateGameForm() {
 
       <button
         type="submit"
-        disabled={loading || !selectedConfig || !playerName.trim()}
+        disabled={loading || !configLookup.config || !playerName.trim()}
         className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {loading ? "Creating..." : "Create Game"}

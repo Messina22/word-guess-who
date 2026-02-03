@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "@client/lib/api";
+import { useAuth } from "@client/context/AuthContext";
+import { AuthModal } from "@client/components/auth/AuthModal";
 import { WordCard } from "@client/components/game/WordCard";
 import type { GameConfig, GameConfigInput, QuestionCategory } from "@shared/types";
 import { generateIdFromName } from "@shared/validation";
@@ -21,10 +23,6 @@ const defaultSettings = {
   enableSounds: true,
 };
 
-function normalizeName(value?: string) {
-  return value?.trim().toLowerCase() ?? "";
-}
-
 function formatDate(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.valueOf())) {
@@ -33,7 +31,7 @@ function formatDate(value: string) {
   return date.toLocaleDateString();
 }
 
-function buildDraftFromConfig(config: GameConfig): GameConfigInput {
+function buildDraftFromConfig(config: GameConfig): GameConfigInput & { isPublic?: boolean } {
   return {
     id: config.id,
     name: config.name,
@@ -42,21 +40,26 @@ function buildDraftFromConfig(config: GameConfig): GameConfigInput {
     wordBank: config.wordBank.map((entry) => ({ ...entry })),
     suggestedQuestions: config.suggestedQuestions.map((question) => ({ ...question })),
     settings: { ...config.settings },
+    isPublic: config.isPublic,
   };
 }
 
-function createEmptyDraft(author?: string): GameConfigInput {
+function createEmptyDraft(authorName?: string): GameConfigInput & { isPublic?: boolean } {
   return {
     name: "",
     description: "",
-    author: author?.trim() || undefined,
+    author: authorName?.trim() || undefined,
     wordBank: [],
     suggestedQuestions: [],
     settings: { ...defaultSettings },
+    isPublic: false,
   };
 }
 
-function normalizeDraft(input: GameConfigInput, fallbackAuthor: string): GameConfigInput {
+function normalizeDraft(
+  input: GameConfigInput & { isPublic?: boolean },
+  fallbackAuthor: string
+): GameConfigInput & { isPublic?: boolean } {
   const trimmedAuthor = (input.author ?? fallbackAuthor).trim();
   return {
     ...input,
@@ -76,16 +79,18 @@ function normalizeDraft(input: GameConfigInput, fallbackAuthor: string): GameCon
 }
 
 export function InstructorPage() {
+  const { instructor, isAuthenticated, isLoading: authLoading, logout } = useAuth();
+
   const [configs, setConfigs] = useState<GameConfig[]>([]);
   const [listLoading, setListLoading] = useState(true);
   const [listError, setListError] = useState<string | null>(null);
 
-  const [instructorName, setInstructorName] = useState(
-    () => localStorage.getItem("instructorName") ?? ""
-  );
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState<"login" | "register">("login");
+
   const [selectedConfigId, setSelectedConfigId] = useState<string | null>(null);
   const [draftSourceId, setDraftSourceId] = useState<string | null>(null);
-  const [draft, setDraft] = useState<GameConfigInput | null>(null);
+  const [draft, setDraft] = useState<(GameConfigInput & { isPublic?: boolean }) | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -104,20 +109,19 @@ export function InstructorPage() {
   );
 
   const isOwner = useMemo(() => {
-    if (!activeConfig) {
+    if (!activeConfig || !instructor) {
       return false;
     }
-    const owner = normalizeName(activeConfig.author);
-    const current = normalizeName(instructorName);
-    return owner !== "" && owner === current;
-  }, [activeConfig, instructorName]);
+    return activeConfig.ownerId === instructor.id;
+  }, [activeConfig, instructor]);
 
-  const isReadOnly = Boolean(draftSourceId && activeConfig && !isOwner);
-  const canEdit = !isReadOnly;
+  const isSystemTemplate = activeConfig?.isSystemTemplate ?? false;
+  const isReadOnly = Boolean(draftSourceId && activeConfig && (!isOwner || isSystemTemplate));
+  const canEdit = !isReadOnly && isAuthenticated;
 
   const normalizedDraft = useMemo(
-    () => (draft ? normalizeDraft(draft, instructorName) : null),
-    [draft, instructorName]
+    () => (draft ? normalizeDraft(draft, instructor?.name ?? "") : null),
+    [draft, instructor?.name]
   );
 
   const wordCount = useMemo(() => {
@@ -157,9 +161,6 @@ export function InstructorPage() {
     if (emptyQuestions > 0) {
       issues.push("Remove or fill in empty questions.");
     }
-    if (!normalizedDraft.author) {
-      issues.push("Set your instructor name to save configs.");
-    }
     if (normalizedDraft.settings.gridSize > wordCount && wordCount > 0) {
       issues.push(`Grid size (${normalizedDraft.settings.gridSize}) cannot exceed word count (${wordCount}).`);
     }
@@ -182,10 +183,6 @@ export function InstructorPage() {
       .map((entry, index) => ({ word: entry.word, index }));
   }, [normalizedDraft]);
 
-  useEffect(() => {
-    localStorage.setItem("instructorName", instructorName);
-  }, [instructorName]);
-
   const refreshConfigs = async () => {
     setListLoading(true);
     setListError(null);
@@ -199,8 +196,10 @@ export function InstructorPage() {
   };
 
   useEffect(() => {
-    refreshConfigs();
-  }, []);
+    if (!authLoading) {
+      refreshConfigs();
+    }
+  }, [authLoading, isAuthenticated]);
 
   const handleSelectConfig = (config: GameConfig) => {
     setSelectedConfigId(config.id);
@@ -211,27 +210,38 @@ export function InstructorPage() {
   };
 
   const handleCreateNew = () => {
+    if (!isAuthenticated) {
+      setAuthModalMode("login");
+      setShowAuthModal(true);
+      return;
+    }
     setSelectedConfigId(null);
     setDraftSourceId(null);
-    setDraft(createEmptyDraft(instructorName));
+    setDraft(createEmptyDraft(instructor?.name));
     setSaveError(null);
     setSaveMessage(null);
   };
 
   const handleDuplicate = (config: GameConfig) => {
+    if (!isAuthenticated) {
+      setAuthModalMode("login");
+      setShowAuthModal(true);
+      return;
+    }
     setSelectedConfigId(null);
     setDraftSourceId(null);
     setDraft({
       ...buildDraftFromConfig(config),
       id: undefined,
       name: `${config.name} (Copy)`,
-      author: instructorName.trim() || undefined,
+      author: instructor?.name ?? undefined,
+      isPublic: false,
     });
     setSaveError(null);
     setSaveMessage(null);
   };
 
-  const updateDraft = (updates: Partial<GameConfigInput>) => {
+  const updateDraft = (updates: Partial<GameConfigInput & { isPublic?: boolean }>) => {
     setDraft((current) => (current ? { ...current, ...updates } : current));
   };
 
@@ -352,7 +362,6 @@ export function InstructorPage() {
 
     const availableSlots = 50 - draft.suggestedQuestions.length;
     const questionsToAdd = lines.slice(0, availableSlots).map((line) => {
-      // Check for category prefix format: "category: question text"
       const prefixMatch = line.match(
         /^(letters|sounds|length|patterns|meaning):\s*(.+)$/i
       );
@@ -430,7 +439,7 @@ export function InstructorPage() {
     }
     setIsSaving(true);
     setSaveError(null);
-    const response = await api.configs.delete(draftSourceId, instructorName);
+    const response = await api.configs.delete(draftSourceId);
     if (response.success) {
       setDraft(null);
       setDraftSourceId(null);
@@ -448,8 +457,22 @@ export function InstructorPage() {
   const canSave = canEdit && validationIssues.length === 0 && !isSaving;
   const displayIssues = canEdit ? validationIssues : [];
 
+  if (authLoading) {
+    return (
+      <div className="min-h-screen p-4 sm:p-8 flex items-center justify-center">
+        <p className="text-pencil/60">Loading...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen p-4 sm:p-8">
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        initialMode={authModalMode}
+      />
+
       <header className="max-w-6xl mx-auto mb-8">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -460,31 +483,72 @@ export function InstructorPage() {
               Build and manage sight word configurations.
             </p>
           </div>
-          <Link
-            to="/"
-            className="btn-secondary w-full sm:w-auto text-center text-sm py-2 px-4"
-          >
-            Back to Home
-          </Link>
+          <div className="flex gap-3">
+            {isAuthenticated ? (
+              <button
+                type="button"
+                onClick={logout}
+                className="btn-secondary text-sm py-2 px-4"
+              >
+                Sign Out
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthModalMode("login");
+                  setShowAuthModal(true);
+                }}
+                className="btn-secondary text-sm py-2 px-4"
+              >
+                Sign In
+              </button>
+            )}
+            <Link
+              to="/"
+              className="btn-secondary text-center text-sm py-2 px-4"
+            >
+              Back to Home
+            </Link>
+          </div>
         </div>
 
-        <div className="paper-card p-4 mt-6">
-          <label htmlFor="instructorName" className="block font-ui text-sm text-pencil/70 mb-1">
-            Instructor Name
-          </label>
-          <input
-            id="instructorName"
-            type="text"
-            value={instructorName}
-            onChange={(event) => setInstructorName(event.target.value)}
-            placeholder="Enter your name to unlock editing"
-            className="input-field"
-          />
-          <p className="text-xs text-pencil/60 mt-2">
-            Configs you create are locked to this name. Authentication will be added
-            later.
-          </p>
-        </div>
+        {isAuthenticated && instructor && (
+          <div className="paper-card p-4 mt-6">
+            <p className="font-ui text-sm text-pencil">
+              Signed in as <strong>{instructor.name}</strong> ({instructor.email})
+            </p>
+          </div>
+        )}
+
+        {!isAuthenticated && (
+          <div className="paper-card p-4 mt-6 bg-sunshine/20">
+            <p className="font-ui text-sm text-pencil">
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthModalMode("login");
+                  setShowAuthModal(true);
+                }}
+                className="text-crayon-blue underline hover:no-underline"
+              >
+                Sign in
+              </button>
+              {" or "}
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthModalMode("register");
+                  setShowAuthModal(true);
+                }}
+                className="text-crayon-blue underline hover:no-underline"
+              >
+                create an account
+              </button>
+              {" to create and manage your own configurations."}
+            </p>
+          </div>
+        )}
       </header>
 
       <main className="max-w-6xl mx-auto grid lg:grid-cols-[1fr_2fr] gap-8">
@@ -525,9 +589,7 @@ export function InstructorPage() {
 
           <div className="space-y-3 mt-4">
             {configs.map((config) => {
-              const owner =
-                normalizeName(config.author) === normalizeName(instructorName) &&
-                normalizeName(config.author) !== "";
+              const isConfigOwner = isAuthenticated && instructor && config.ownerId === instructor.id;
               const isSelected = config.id === selectedConfigId;
               return (
                 <div
@@ -545,16 +607,30 @@ export function InstructorPage() {
                         {config.wordBank.length} words | {config.suggestedQuestions.length}{" "}
                         questions
                       </p>
-                      <p className="text-xs text-pencil/60">
-                        Author: {config.author || "Unknown"}
-                      </p>
-                      <p className="text-xs text-pencil/50">
-                        Updated {formatDate(config.updatedAt)}
-                      </p>
-                      {!owner && (
-                        <span className="inline-block mt-2 px-2 py-1 text-xs bg-sunshine/30 text-pencil rounded">
+                      {config.isSystemTemplate && (
+                        <span className="inline-block mt-1 px-2 py-0.5 text-xs bg-grape/20 text-grape rounded">
+                          System Template
+                        </span>
+                      )}
+                      {isConfigOwner && (
+                        <span className={`inline-block mt-1 ml-1 px-2 py-0.5 text-xs rounded ${
+                          config.isPublic ? "bg-grass/20 text-grass" : "bg-kraft/40 text-pencil/70"
+                        }`}>
+                          {config.isPublic ? "Public" : "Private"}
+                        </span>
+                      )}
+                      {!isConfigOwner && !config.isSystemTemplate && (
+                        <span className="inline-block mt-1 px-2 py-0.5 text-xs bg-sunshine/30 text-pencil rounded">
                           View only
                         </span>
+                      )}
+                      <p className="text-xs text-pencil/50 mt-1">
+                        Updated {formatDate(config.updatedAt)}
+                      </p>
+                      {isConfigOwner && (
+                        <p className="text-xs text-pencil/60 mt-1 font-mono bg-paper-cream/50 px-1 rounded">
+                          Code: {config.id}
+                        </p>
                       )}
                     </div>
                     <div className="flex flex-col gap-2">
@@ -608,12 +684,26 @@ export function InstructorPage() {
                         : "Start with the basics and build a new word set."}
                     </p>
                   </div>
-                  {isReadOnly && (
+                  {isSystemTemplate && (
+                    <span className="text-xs bg-grape/20 text-grape px-3 py-2 rounded">
+                      System Template - read only
+                    </span>
+                  )}
+                  {isReadOnly && !isSystemTemplate && (
                     <span className="text-xs bg-sunshine/40 text-pencil px-3 py-2 rounded">
                       View only - duplicate to edit
                     </span>
                   )}
                 </div>
+
+                {draftSourceId && isOwner && (
+                  <div className="mt-4 p-3 bg-paper-cream/50 rounded-lg">
+                    <p className="text-sm text-pencil/70 mb-1">Config Code (share with students):</p>
+                    <p className="font-mono text-lg text-pencil bg-white/50 px-3 py-2 rounded border border-kraft/30">
+                      {draftSourceId}
+                    </p>
+                  </div>
+                )}
 
                 {saveMessage && (
                   <div className="mt-4 p-3 bg-grass/10 text-grass rounded-lg text-sm">
@@ -657,7 +747,7 @@ export function InstructorPage() {
                   </div>
                   <div>
                     <label htmlFor="configId" className="block font-ui text-sm text-pencil/70 mb-1">
-                      Config ID
+                      Config ID (Code)
                     </label>
                     <div className="flex gap-2">
                       <input
@@ -703,22 +793,25 @@ export function InstructorPage() {
                     placeholder="Describe the word set (optional)"
                   />
                 </div>
-                <div className="mt-4">
-                  <label
-                    htmlFor="configAuthor"
-                    className="block font-ui text-sm text-pencil/70 mb-1"
-                  >
-                    Author
-                  </label>
-                  <input
-                    id="configAuthor"
-                    type="text"
-                    value={draft.author ?? instructorName}
-                    className="input-field disabled:opacity-60 disabled:cursor-not-allowed"
-                    disabled
-                    placeholder="Set instructor name above"
-                  />
-                </div>
+
+                {canEdit && (
+                  <div className="mt-4">
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={draft.isPublic ?? false}
+                        onChange={(event) => updateDraft({ isPublic: event.target.checked })}
+                        className="w-5 h-5 rounded border-pencil/30 text-crayon-blue focus:ring-crayon-blue"
+                      />
+                      <div>
+                        <span className="font-ui text-sm text-pencil">Make this config public</span>
+                        <p className="text-xs text-pencil/60">
+                          Public configs appear in the browse list. Private configs are only accessible via code.
+                        </p>
+                      </div>
+                    </label>
+                  </div>
+                )}
               </section>
 
               <section className="paper-card p-6">
@@ -1015,19 +1108,21 @@ export function InstructorPage() {
 
               <section className="paper-card p-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex flex-col sm:flex-row gap-3">
-                  <button
-                    type="button"
-                    onClick={handleSave}
-                    className="btn-primary text-sm py-3 px-6"
-                    disabled={!canSave}
-                  >
-                    {isSaving
-                      ? "Saving..."
-                      : draftSourceId
-                      ? "Save Changes"
-                      : "Create Config"}
-                  </button>
-                  {draftSourceId && isOwner && (
+                  {canEdit && (
+                    <button
+                      type="button"
+                      onClick={handleSave}
+                      className="btn-primary text-sm py-3 px-6"
+                      disabled={!canSave}
+                    >
+                      {isSaving
+                        ? "Saving..."
+                        : draftSourceId
+                        ? "Save Changes"
+                        : "Create Config"}
+                    </button>
+                  )}
+                  {draftSourceId && isOwner && !isSystemTemplate && (
                     <button
                       type="button"
                       onClick={handleDelete}
