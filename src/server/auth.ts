@@ -1,7 +1,17 @@
 import { SignJWT, jwtVerify, type JWTPayload } from "jose";
 
+const DEFAULT_SECRET = "development-secret-change-in-production";
+const isProduction = process.env.NODE_ENV === "production";
+
+if (isProduction && !process.env.JWT_SECRET) {
+  throw new Error(
+    "JWT_SECRET environment variable must be set in production. " +
+    "Using the default secret in production would allow token forgery."
+  );
+}
+
 const JWT_SECRET = new globalThis.TextEncoder().encode(
-  process.env.JWT_SECRET || "development-secret-change-in-production"
+  process.env.JWT_SECRET || DEFAULT_SECRET
 );
 const JWT_EXPIRATION = "7d";
 

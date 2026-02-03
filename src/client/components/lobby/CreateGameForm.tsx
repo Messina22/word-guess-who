@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "@client/lib/api";
 import type { GameConfig } from "@shared/types";
@@ -20,6 +20,9 @@ export function CreateGameForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Track request freshness to ignore stale responses
+  const requestIdRef = useRef(0);
+
   // Derive API flags from gameMode
   const isLocalMode = gameMode === "local";
   const sharedComputerMode = gameMode === "shared";
@@ -29,11 +32,20 @@ export function CreateGameForm() {
 
   // Debounced config lookup - uses "default" if code is empty
   const lookupConfig = useCallback(async (code: string) => {
-    const codeToLookup = code.trim() || "default";
+    const codeToLookup = code.trim().toLowerCase() || "default";
+
+    // Increment request ID and capture it for this request
+    const currentRequestId = ++requestIdRef.current;
 
     setConfigLookup({ loading: true, config: null, error: null });
 
     const response = await api.configs.get(codeToLookup);
+
+    // Ignore stale responses
+    if (currentRequestId !== requestIdRef.current) {
+      return;
+    }
+
     if (response.success && response.data) {
       setConfigLookup({ loading: false, config: response.data, error: null });
     } else {
