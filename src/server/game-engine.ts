@@ -203,6 +203,15 @@ export function updatePlayerName(
     return { success: false, error: "Player name cannot be empty" };
   }
 
+  // Check for duplicate name (excluding the current player)
+  if (
+    session.players.some(
+      (p, i) => i !== playerIndex && p.name.toLowerCase() === trimmedName.toLowerCase()
+    )
+  ) {
+    return { success: false, error: "Player name already taken" };
+  }
+
   session.players[playerIndex].name = trimmedName;
   return { success: true, playerIndex, playerName: trimmedName };
 }
