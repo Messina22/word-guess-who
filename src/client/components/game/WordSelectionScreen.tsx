@@ -37,9 +37,17 @@ function SelectionCard({ card, onClick }: SelectionCardProps) {
 }
 
 export function WordSelectionScreen() {
-  const { cards, hasSelectedWord, opponentHasSelected, mySecretWord, opponent, sharedComputerMode, session, error } =
-    useGameState();
-  const { selectSecretWord, updatePlayerName } = useGameActions();
+  const {
+    cards,
+    hasSelectedWord,
+    opponentHasSelected,
+    mySecretWord,
+    opponent,
+    sharedComputerMode,
+    session,
+    error,
+  } = useGameState();
+  const { selectSecretWord, updatePlayerName, clearError } = useGameActions();
 
   const player1Name = session?.players[0]?.name ?? "the other player";
   const defaultOpponentName =
@@ -52,14 +60,15 @@ export function WordSelectionScreen() {
   const [player2Name, setPlayer2Name] = useState(defaultOpponentName);
   const [player2NameTouched, setPlayer2NameTouched] = useState(false);
   // Track if we're waiting for server to confirm the name update
-  const [awaitingNameConfirmation, setAwaitingNameConfirmation] = useState(false);
+  const [awaitingNameConfirmation, setAwaitingNameConfirmation] =
+    useState(false);
   const [pendingName, setPendingName] = useState<string | null>(null);
   const player2DisplayName = player2Name.trim() || defaultOpponentName;
 
   // Effect to handle name confirmation from server
   useEffect(() => {
     if (!awaitingNameConfirmation || !pendingName) return;
-    
+
     // If server confirmed the name (opponent?.name matches pendingName)
     if (opponent?.name === pendingName) {
       setPlayer2Name(pendingName);
@@ -67,7 +76,7 @@ export function WordSelectionScreen() {
       setAwaitingNameConfirmation(false);
       setPendingName(null);
     }
-    
+
     // If server returned an error, reset the waiting state
     if (error) {
       setAwaitingNameConfirmation(false);
@@ -76,7 +85,12 @@ export function WordSelectionScreen() {
   }, [awaitingNameConfirmation, pendingName, opponent?.name, error]);
 
   useEffect(() => {
-    if (sharedComputerMode && selectingForPlayer2 && !player2Ready && !player2NameTouched) {
+    if (
+      sharedComputerMode &&
+      selectingForPlayer2 &&
+      !player2Ready &&
+      !player2NameTouched
+    ) {
       setPlayer2Name(defaultOpponentName);
     }
   }, [
@@ -97,7 +111,12 @@ export function WordSelectionScreen() {
           : 6;
 
   // In shared computer mode, after player 1 selects, show handoff screen
-  if (sharedComputerMode && hasSelectedWord && !opponentHasSelected && !selectingForPlayer2) {
+  if (
+    sharedComputerMode &&
+    hasSelectedWord &&
+    !opponentHasSelected &&
+    !selectingForPlayer2
+  ) {
     return (
       <div className="paper-card p-8 max-w-md mx-auto text-center">
         <div className="mb-6">
@@ -108,14 +127,18 @@ export function WordSelectionScreen() {
             Your Secret Word
           </h2>
           <div className="inline-block bg-lined-paper rounded-lg p-4 shadow-md">
-            <span className="font-word text-3xl text-pencil">{mySecretWord}</span>
+            <span className="font-word text-3xl text-pencil">
+              {mySecretWord}
+            </span>
           </div>
         </div>
 
         <div className="border-t border-pencil/20 pt-6">
           <p className="font-ui text-pencil/70 mb-4">
             Remember your word! Now hand the device to{" "}
-            <span className="font-semibold text-pencil">{opponent?.name ?? "your opponent"}</span>{" "}
+            <span className="font-semibold text-pencil">
+              {opponent?.name ?? "your opponent"}
+            </span>{" "}
             so they can select their secret word.
           </p>
           <button
@@ -134,6 +157,8 @@ export function WordSelectionScreen() {
     const handlePlayer2Ready = () => {
       const nextName = player2Name.trim() || defaultOpponentName;
       if (nextName !== opponent?.name) {
+        // Clear any previous error before attempting new name update
+        clearError();
         // Wait for server confirmation before proceeding
         setPendingName(nextName);
         setAwaitingNameConfirmation(true);
@@ -212,7 +237,12 @@ export function WordSelectionScreen() {
   }
 
   // In shared computer mode, player 2 is selecting
-  if (sharedComputerMode && selectingForPlayer2 && player2Ready && !opponentHasSelected) {
+  if (
+    sharedComputerMode &&
+    selectingForPlayer2 &&
+    player2Ready &&
+    !opponentHasSelected
+  ) {
     return (
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-6">
@@ -220,7 +250,8 @@ export function WordSelectionScreen() {
             {player2DisplayName}, Choose Your Secret Word
           </h2>
           <p className="font-ui text-pencil/70">
-            Click on a word to select it as your secret word. {session?.players[0]?.name ?? "Your opponent"} will try to guess it!
+            Click on a word to select it as your secret word.{" "}
+            {session?.players[0]?.name ?? "Your opponent"} will try to guess it!
           </p>
         </div>
 
@@ -256,7 +287,9 @@ export function WordSelectionScreen() {
             Your Secret Word
           </h2>
           <div className="inline-block bg-lined-paper rounded-lg p-4 shadow-md">
-            <span className="font-word text-3xl text-pencil">{mySecretWord}</span>
+            <span className="font-word text-3xl text-pencil">
+              {mySecretWord}
+            </span>
           </div>
         </div>
 
@@ -298,7 +331,8 @@ export function WordSelectionScreen() {
                 />
               </div>
               <p className="font-ui text-pencil/70">
-                Waiting for {opponent?.name ?? "opponent"} to select their word...
+                Waiting for {opponent?.name ?? "opponent"} to select their
+                word...
               </p>
             </div>
           )}
@@ -315,7 +349,8 @@ export function WordSelectionScreen() {
           Choose Your Secret Word
         </h2>
         <p className="font-ui text-pencil/70">
-          Click on a word to select it as your secret word. Your opponent will try to guess it!
+          Click on a word to select it as your secret word. Your opponent will
+          try to guess it!
         </p>
         {opponentHasSelected && (
           <p className="font-ui text-sm text-green-600 mt-2">
