@@ -37,7 +37,7 @@ function SelectionCard({ card, onClick }: SelectionCardProps) {
 }
 
 export function WordSelectionScreen() {
-  const { cards, hasSelectedWord, opponentHasSelected, mySecretWord, opponent, sharedComputerMode, session } =
+  const { cards, hasSelectedWord, opponentHasSelected, mySecretWord, opponent, sharedComputerMode, session, error } =
     useGameState();
   const { selectSecretWord, updatePlayerName } = useGameActions();
 
@@ -51,7 +51,29 @@ export function WordSelectionScreen() {
   const [player2Ready, setPlayer2Ready] = useState(false);
   const [player2Name, setPlayer2Name] = useState(defaultOpponentName);
   const [player2NameTouched, setPlayer2NameTouched] = useState(false);
+  // Track if we're waiting for server to confirm the name update
+  const [awaitingNameConfirmation, setAwaitingNameConfirmation] = useState(false);
+  const [pendingName, setPendingName] = useState<string | null>(null);
   const player2DisplayName = player2Name.trim() || defaultOpponentName;
+
+  // Effect to handle name confirmation from server
+  useEffect(() => {
+    if (!awaitingNameConfirmation || !pendingName) return;
+    
+    // If server confirmed the name (opponent?.name matches pendingName)
+    if (opponent?.name === pendingName) {
+      setPlayer2Name(pendingName);
+      setPlayer2Ready(true);
+      setAwaitingNameConfirmation(false);
+      setPendingName(null);
+    }
+    
+    // If server returned an error, reset the waiting state
+    if (error) {
+      setAwaitingNameConfirmation(false);
+      setPendingName(null);
+    }
+  }, [awaitingNameConfirmation, pendingName, opponent?.name, error]);
 
   useEffect(() => {
     if (sharedComputerMode && selectingForPlayer2 && !player2Ready && !player2NameTouched) {
@@ -112,10 +134,15 @@ export function WordSelectionScreen() {
     const handlePlayer2Ready = () => {
       const nextName = player2Name.trim() || defaultOpponentName;
       if (nextName !== opponent?.name) {
+        // Wait for server confirmation before proceeding
+        setPendingName(nextName);
+        setAwaitingNameConfirmation(true);
         updatePlayerName(1, nextName);
+      } else {
+        // Name unchanged, proceed immediately
+        setPlayer2Name(nextName);
+        setPlayer2Ready(true);
       }
-      setPlayer2Name(nextName);
-      setPlayer2Ready(true);
     };
 
     return (
