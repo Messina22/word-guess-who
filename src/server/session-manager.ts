@@ -15,6 +15,7 @@ import type {
 import {
   createGameSession,
   addPlayer,
+  updatePlayerName,
   disconnectPlayer,
   allPlayersDisconnected,
   flipCard,
@@ -285,6 +286,10 @@ class SessionManager {
         this.handleEndTurn(ws, room, playerId);
         break;
 
+      case "update_player_name":
+        this.handleUpdatePlayerName(room, playerId, message.playerIndex, message.playerName);
+        break;
+
       case "leave_game":
         this.handleDisconnect(ws);
         ws.close();
@@ -515,6 +520,35 @@ class SessionManager {
         nextPlayerIndex: result.nextTurn,
       });
     }
+  }
+
+  /** Handle player name updates (shared computer mode) */
+  private handleUpdatePlayerName(
+    room: GameRoom,
+    playerId: string,
+    playerIndex: number,
+    playerName: string
+  ): void {
+    if (!room.session.sharedComputerMode) {
+      const socket = room.sockets.get(playerId);
+      if (socket) {
+        this.sendError(socket, "Player name updates are only available in shared computer mode");
+      }
+      return;
+    }
+
+    const result = updatePlayerName(room.session, playerIndex, playerName);
+    if (!result.success) {
+      const socket = room.sockets.get(playerId);
+      if (socket) this.sendError(socket, result.error);
+      return;
+    }
+
+    this.broadcast(room, {
+      type: "player_name_updated",
+      playerIndex: result.playerIndex,
+      playerName: result.playerName,
+    });
   }
 
   /** Send full game state to a player */

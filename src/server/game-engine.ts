@@ -184,6 +184,38 @@ export function addPlayer(
   return { player, playerIndex };
 }
 
+/** Update a player's display name */
+export function updatePlayerName(
+  session: GameSession,
+  playerIndex: number,
+  playerName: string
+): { success: true; playerIndex: number; playerName: string } | { success: false; error: string } {
+  if (!Number.isInteger(playerIndex)) {
+    return { success: false, error: "Invalid player index" };
+  }
+
+  if (playerIndex < 0 || playerIndex >= session.players.length) {
+    return { success: false, error: "Player not found" };
+  }
+
+  const trimmedName = playerName.trim();
+  if (!trimmedName) {
+    return { success: false, error: "Player name cannot be empty" };
+  }
+
+  // Check for duplicate name (excluding the current player)
+  if (
+    session.players.some(
+      (p, i) => i !== playerIndex && p.name.toLowerCase() === trimmedName.toLowerCase()
+    )
+  ) {
+    return { success: false, error: "Player name already taken" };
+  }
+
+  session.players[playerIndex].name = trimmedName;
+  return { success: true, playerIndex, playerName: trimmedName };
+}
+
 /** Mark a player as disconnected */
 export function disconnectPlayer(
   session: GameSession,

@@ -174,6 +174,20 @@ function gameReducer(
             },
           };
 
+        case "player_name_updated":
+          if (!state.session) return state;
+          return {
+            ...state,
+            session: {
+              ...state.session,
+              players: state.session.players.map((player, index) =>
+                index === message.playerIndex
+                  ? { ...player, name: message.playerName }
+                  : player
+              ),
+            },
+          };
+
         case "card_flipped": {
           const isMyFlip = message.playerIndex === state.playerIndex;
           const toggleInList = (list: number[], index: number) =>
@@ -296,6 +310,8 @@ interface GameContextValue extends GameContextState {
   selectSecretWord: (cardIndex: number, forPlayerIndex?: number) => void;
   /** End turn without guessing (pass the device in shared computer mode) */
   endTurn: () => void;
+  /** Update a player's display name (shared computer mode) */
+  updatePlayerName: (playerIndex: number, playerName: string) => void;
   /** Toggle visibility of the secret word indicator */
   setSecretWordHidden: (hidden: boolean) => void;
   /** Ref set when join_game is sent; used to avoid double-join (e.g. Strict Mode remount) */
@@ -393,6 +409,13 @@ export function GameProvider({ children }: { children: ReactNode }) {
     send({ type: "end_turn" });
   }, [send]);
 
+  const updatePlayerName = useCallback(
+    (playerIndex: number, playerName: string) => {
+      send({ type: "update_player_name", playerIndex, playerName });
+    },
+    [send]
+  );
+
   const setSecretWordHidden = useCallback((hidden: boolean) => {
     dispatch({ type: "SET_SECRET_WORD_HIDDEN", hidden });
   }, []);
@@ -409,6 +432,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     leaveGame,
     selectSecretWord,
     endTurn,
+    updatePlayerName,
     setSecretWordHidden,
     joinedGameCodeRef,
   };

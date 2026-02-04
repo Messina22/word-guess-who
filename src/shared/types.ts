@@ -221,7 +221,8 @@ export type ClientMessageType =
   | "make_guess"
   | "leave_game"
   | "select_secret_word"
-  | "end_turn";
+  | "end_turn"
+  | "update_player_name";
 
 /** Server → Client message types */
 export type ServerMessageType =
@@ -230,6 +231,7 @@ export type ServerMessageType =
   | "player_joined"
   | "player_left"
   | "player_reconnected"
+  | "player_name_updated"
   | "card_flipped"
   | "question_asked"
   | "question_answered"
@@ -295,6 +297,13 @@ export interface EndTurnMessage extends ClientMessageBase {
   type: "end_turn";
 }
 
+/** Update a player's display name (shared computer mode) */
+export interface UpdatePlayerNameMessage extends ClientMessageBase {
+  type: "update_player_name";
+  playerIndex: number;
+  playerName: string;
+}
+
 /** Union of all client messages */
 export type ClientMessage =
   | JoinGameMessage
@@ -304,7 +313,8 @@ export type ClientMessage =
   | MakeGuessMessage
   | LeaveGameMessage
   | SelectSecretWordMessage
-  | EndTurnMessage;
+  | EndTurnMessage
+  | UpdatePlayerNameMessage;
 
 /** Base server message */
 interface ServerMessageBase {
@@ -362,6 +372,13 @@ export interface PlayerLeftMessage extends ServerMessageBase {
 export interface PlayerReconnectedMessage extends ServerMessageBase {
   type: "player_reconnected";
   playerIndex: number;
+}
+
+/** A player's name was updated */
+export interface PlayerNameUpdatedMessage extends ServerMessageBase {
+  type: "player_name_updated";
+  playerIndex: number;
+  playerName: string;
 }
 
 /** A card was flipped */
@@ -427,6 +444,7 @@ export type ServerMessage =
   | PlayerJoinedMessage
   | PlayerLeftMessage
   | PlayerReconnectedMessage
+  | PlayerNameUpdatedMessage
   | CardFlippedMessage
   | QuestionAskedMessage
   | QuestionAnsweredMessage

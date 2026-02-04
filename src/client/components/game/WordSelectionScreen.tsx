@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useGameState } from "@client/hooks/useGameState";
 import { useGameActions } from "@client/hooks/useGameActions";
 import type { CardState } from "@shared/types";
@@ -37,14 +37,55 @@ function SelectionCard({ card, onClick }: SelectionCardProps) {
 }
 
 export function WordSelectionScreen() {
-  const { cards, hasSelectedWord, opponentHasSelected, mySecretWord, opponent, sharedComputerMode, session } =
+  const { cards, hasSelectedWord, opponentHasSelected, mySecretWord, opponent, sharedComputerMode, session, error } =
     useGameState();
-  const { selectSecretWord } = useGameActions();
+  const { selectSecretWord, updatePlayerName } = useGameActions();
+
+  const player1Name = session?.players[0]?.name ?? "the other player";
+  const defaultOpponentName =
+    opponent?.name ?? `${session?.players[0]?.name ?? "Player 1"}'s Opponent`;
 
   // In shared computer mode, track if we're selecting for the second player
   const [selectingForPlayer2, setSelectingForPlayer2] = useState(false);
   // Track if player 1 has confirmed they're ready (after handoff)
   const [player2Ready, setPlayer2Ready] = useState(false);
+  const [player2Name, setPlayer2Name] = useState(defaultOpponentName);
+  const [player2NameTouched, setPlayer2NameTouched] = useState(false);
+  // Track if we're waiting for server to confirm the name update
+  const [awaitingNameConfirmation, setAwaitingNameConfirmation] = useState(false);
+  const [pendingName, setPendingName] = useState<string | null>(null);
+  const player2DisplayName = player2Name.trim() || defaultOpponentName;
+
+  // Effect to handle name confirmation from server
+  useEffect(() => {
+    if (!awaitingNameConfirmation || !pendingName) return;
+    
+    // If server confirmed the name (opponent?.name matches pendingName)
+    if (opponent?.name === pendingName) {
+      setPlayer2Name(pendingName);
+      setPlayer2Ready(true);
+      setAwaitingNameConfirmation(false);
+      setPendingName(null);
+    }
+    
+    // If server returned an error, reset the waiting state
+    if (error) {
+      setAwaitingNameConfirmation(false);
+      setPendingName(null);
+    }
+  }, [awaitingNameConfirmation, pendingName, opponent?.name, error]);
+
+  useEffect(() => {
+    if (sharedComputerMode && selectingForPlayer2 && !player2Ready && !player2NameTouched) {
+      setPlayer2Name(defaultOpponentName);
+    }
+  }, [
+    sharedComputerMode,
+    selectingForPlayer2,
+    player2Ready,
+    player2NameTouched,
+    defaultOpponentName,
+  ]);
 
   const gridCols =
     cards.length <= 12
@@ -90,6 +131,20 @@ export function WordSelectionScreen() {
 
   // In shared computer mode, show ready screen for player 2
   if (sharedComputerMode && selectingForPlayer2 && !player2Ready) {
+    const handlePlayer2Ready = () => {
+      const nextName = player2Name.trim() || defaultOpponentName;
+      if (nextName !== opponent?.name) {
+        // Wait for server confirmation before proceeding
+        setPendingName(nextName);
+        setAwaitingNameConfirmation(true);
+        updatePlayerName(1, nextName);
+      } else {
+        // Name unchanged, proceed immediately
+        setPlayer2Name(nextName);
+        setPlayer2Ready(true);
+      }
+    };
+
     return (
       <div className="paper-card p-8 max-w-md mx-auto text-center">
         <div className="mb-6">
@@ -109,17 +164,45 @@ export function WordSelectionScreen() {
             </svg>
           </div>
           <h2 className="font-display text-2xl text-pencil mb-2">
-            {opponent?.name ?? "Player 2"}'s Turn
+            <span className="inline-flex items-center justify-center gap-2 flex-wrap">
+              <label htmlFor="player2-name" className="sr-only">
+                Player 2 name
+              </label>
+              <input
+                id="player2-name"
+                type="text"
+                value={player2Name}
+                onChange={(event) => {
+                  setPlayer2Name(event.target.value);
+                  setPlayer2NameTouched(true);
+                }}
+                onBlur={() => {
+                  if (!player2Name.trim()) {
+                    setPlayer2Name(defaultOpponentName);
+                    setPlayer2NameTouched(false);
+                  }
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    handlePlayer2Ready();
+                  }
+                }}
+                className="input-field w-auto min-w-[220px] text-center font-display text-2xl"
+                aria-label="Player 2 name"
+              />
+              <span>{"'s Turn"}</span>
+            </span>
           </h2>
         </div>
 
         <p className="font-ui text-pencil/70 mb-6">
-          Make sure {session?.players[0]?.name ?? "the other player"} can't see the screen.
+          Make sure {player1Name} can't see the screen.
           <br />
           When you're ready, tap the button below to choose your secret word.
         </p>
         <button
-          onClick={() => setPlayer2Ready(true)}
+          onClick={handlePlayer2Ready}
           className="btn-primary w-full py-4 text-lg"
         >
           I'm Ready - Show Me the Words
@@ -134,7 +217,7 @@ export function WordSelectionScreen() {
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-6">
           <h2 className="font-display text-2xl text-pencil mb-2">
-            {opponent?.name ?? "Player 2"}, Choose Your Secret Word
+            {player2DisplayName}, Choose Your Secret Word
           </h2>
           <p className="font-ui text-pencil/70">
             Click on a word to select it as your secret word. {session?.players[0]?.name ?? "Your opponent"} will try to guess it!
