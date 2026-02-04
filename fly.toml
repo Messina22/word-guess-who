@@ -19,6 +19,7 @@ primary_region = 'iad'
 [mounts]
   source = "data"
   destination = "/app/data"
+  processes = ["app"]
 
 [[vm]]
   memory = '1gb'
