@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useGameState } from "@client/hooks/useGameState";
 import { useGameActions } from "@client/hooks/useGameActions";
+import { useSessionGameLog } from "@client/context/SessionGameLogContext";
 import { GameBoard } from "@client/components/game/GameBoard";
 import { QuestionPanel } from "@client/components/game/QuestionPanel";
 import { QuestionLog } from "@client/components/game/QuestionLog";
@@ -13,10 +14,20 @@ import { WordSelectionScreen } from "@client/components/game/WordSelectionScreen
 export function GamePage() {
   const { code } = useParams<{ code: string }>();
   const navigate = useNavigate();
-  const { session, connected, error, isWaiting, isSelecting, isFinished } =
-    useGameState();
+  const {
+    session,
+    connected,
+    error,
+    isWaiting,
+    isSelecting,
+    isFinished,
+    iWon,
+    opponent,
+  } = useGameState();
   const { joinGame, leaveGame, clearError, joinedGameCodeRef } =
     useGameActions();
+  const { addGameResult, recordedGameCodes, markGameRecorded } =
+    useSessionGameLog();
   const [hasJoined, setHasJoined] = useState(false);
 
   useEffect(() => {
@@ -46,13 +57,29 @@ export function GamePage() {
   useEffect(() => {
     if (session && code) {
       const myPlayer = session.players.find(
-        (p) => p.name === localStorage.getItem("playerName")
+        (p) => p.name === localStorage.getItem("playerName"),
       );
       if (myPlayer) {
         localStorage.setItem(`playerId_${code}`, myPlayer.id);
       }
     }
   }, [session, code]);
+
+  // Record game result when game finishes
+  useEffect(() => {
+    if (isFinished && opponent && code && !recordedGameCodes.has(code)) {
+      markGameRecorded(code);
+      addGameResult(opponent.name, iWon);
+    }
+  }, [
+    isFinished,
+    opponent,
+    code,
+    iWon,
+    addGameResult,
+    recordedGameCodes,
+    markGameRecorded,
+  ]);
 
   const handleLeave = () => {
     leaveGame();
