@@ -3,10 +3,11 @@ import { validateRegisterInput, validateLoginInput } from "@shared/validation";
 import {
   createInstructor,
   authenticateInstructor,
-  getInstructorById,
+  mapUserToInstructor,
 } from "../instructor-manager";
 import { extractTokenFromHeader, verifyToken } from "../auth";
 import { jsonResponse } from "../utils/response";
+import { supabaseAuth } from "../supabase";
 
 /** POST /api/auth/register - Create a new instructor account */
 export async function handleRegister(request: Request): Promise<Response> {
@@ -95,21 +96,59 @@ export async function handleMe(request: Request): Promise<Response> {
     );
   }
 
-  const payload = await verifyToken(token);
-  if (!payload) {
+  const instructor = await verifyToken(token);
+  if (!instructor) {
     return jsonResponse<null>(
       { success: false, error: "Invalid or expired token" },
       401
     );
   }
 
-  const instructor = getInstructorById(payload.instructorId);
-  if (!instructor) {
+  return jsonResponse<Instructor>({ success: true, data: instructor });
+}
+
+/** POST /api/auth/refresh - Refresh access token */
+export async function handleRefresh(request: Request): Promise<Response> {
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
     return jsonResponse<null>(
-      { success: false, error: "Instructor not found" },
-      404
+      { success: false, error: "Invalid JSON body" },
+      400
     );
   }
 
-  return jsonResponse<Instructor>({ success: true, data: instructor });
+  const refreshToken =
+    typeof (body as { refreshToken?: unknown }).refreshToken === "string"
+      ? (body as { refreshToken: string }).refreshToken
+      : null;
+
+  if (!refreshToken) {
+    return jsonResponse<null>(
+      { success: false, error: "Refresh token is required" },
+      400
+    );
+  }
+
+  const { data, error } = await supabaseAuth.auth.refreshSession({
+    refresh_token: refreshToken,
+  });
+
+  if (error || !data.session || !data.user) {
+    return jsonResponse<null>(
+      { success: false, error: "Invalid or expired refresh token" },
+      401
+    );
+  }
+
+  const instructor = mapUserToInstructor(data.user);
+  return jsonResponse<AuthResponse>({
+    success: true,
+    data: {
+      instructor,
+      token: data.session.access_token,
+      refreshToken: data.session.refresh_token,
+    },
+  });
 }

@@ -1,69 +1,15 @@
-import { SignJWT, jwtVerify, type JWTPayload } from "jose";
+import type { Instructor } from "@shared/types";
+import { supabaseAdmin } from "./supabase";
+import { mapUserToInstructor } from "./instructor-manager";
 
-const DEFAULT_SECRET = "development-secret-change-in-production";
-const isProduction = process.env.NODE_ENV === "production";
-
-if (isProduction && !process.env.JWT_SECRET) {
-  throw new Error(
-    "JWT_SECRET environment variable must be set in production. " +
-    "Using the default secret in production would allow token forgery."
-  );
-}
-
-const JWT_SECRET = new globalThis.TextEncoder().encode(
-  process.env.JWT_SECRET || DEFAULT_SECRET
-);
-const JWT_EXPIRATION = "7d";
-
-export interface TokenPayload extends JWTPayload {
-  instructorId: string;
-  email: string;
-}
-
-/** Hash a password using bcrypt via Bun */
-export async function hashPassword(password: string): Promise<string> {
-  return await Bun.password.hash(password, {
-    algorithm: "bcrypt",
-    cost: 10,
-  });
-}
-
-/** Verify a password against a hash */
-export async function verifyPassword(
-  password: string,
-  hash: string
-): Promise<boolean> {
-  return await Bun.password.verify(password, hash);
-}
-
-/** Generate a JWT token for an instructor */
-export async function generateToken(
-  instructorId: string,
-  email: string
-): Promise<string> {
-  return await new SignJWT({ instructorId, email })
-    .setProtectedHeader({ alg: "HS256" })
-    .setIssuedAt()
-    .setExpirationTime(JWT_EXPIRATION)
-    .sign(JWT_SECRET);
-}
-
-/** Verify and decode a JWT token */
-export async function verifyToken(
-  token: string
-): Promise<TokenPayload | null> {
-  try {
-    const { payload } = await jwtVerify(token, JWT_SECRET);
-    if (
-      typeof payload.instructorId === "string" &&
-      typeof payload.email === "string"
-    ) {
-      return payload as TokenPayload;
-    }
-    return null;
-  } catch {
+/** Verify a Supabase access token and return the instructor */
+export async function verifyToken(token: string): Promise<Instructor | null> {
+  const { data, error } = await supabaseAdmin.auth.getUser(token);
+  if (error || !data.user) {
     return null;
   }
+
+  return mapUserToInstructor(data.user);
 }
 
 /** Extract token from Authorization header */

@@ -33,9 +33,6 @@ COPY --from=builder /app/dist/client ./dist/client
 # Copy config files
 COPY --from=builder /app/configs ./configs
 
-# Create data directory for SQLite (will be mounted as volume)
-RUN mkdir -p /app/data
-
 EXPOSE 3000
 
 CMD ["bun", "run", "src/server/index.ts"]

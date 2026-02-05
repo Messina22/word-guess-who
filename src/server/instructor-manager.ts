@@ -1,35 +1,30 @@
-import { nanoid } from "nanoid";
-import { getDb } from "./db";
-import { hashPassword, verifyPassword, generateToken } from "./auth";
-import type {
-  Instructor,
-  InstructorRow,
-  AuthResponse,
-  RegisterInput,
-  LoginInput,
-} from "@shared/types";
+import type { User } from "@supabase/supabase-js";
+import type { AuthResponse, Instructor, LoginInput, RegisterInput } from "@shared/types";
+import { supabaseAdmin, supabaseAuth } from "./supabase";
 
-/** Convert a database row to an Instructor object */
-function rowToInstructor(row: InstructorRow): Instructor {
-  return {
-    id: row.id,
-    email: row.email,
-    name: row.name,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-  };
+const FALLBACK_NAME = "Instructor";
+
+function getUserName(user: User): string {
+  const metadata = user.user_metadata as Record<string, unknown> | null;
+  const metadataName =
+    (typeof metadata?.name === "string" ? metadata.name : "") ||
+    (typeof metadata?.full_name === "string" ? metadata.full_name : "");
+  if (metadataName.trim()) return metadataName.trim();
+  if (user.email) {
+    const emailPrefix = user.email.split("@")[0];
+    if (emailPrefix) return emailPrefix;
+  }
+  return FALLBACK_NAME;
 }
 
-/** Check if an email is already registered */
-export function emailExists(email: string): boolean {
-  const db = getDb();
-  const row = db
-    .query<
-      { count: number },
-      [string]
-    >("SELECT COUNT(*) as count FROM instructors WHERE LOWER(email) = LOWER(?)")
-    .get(email);
-  return (row?.count ?? 0) > 0;
+export function mapUserToInstructor(user: User): Instructor {
+  return {
+    id: user.id,
+    email: user.email ?? "",
+    name: getUserName(user),
+    createdAt: user.created_at,
+    updatedAt: user.updated_at ?? user.created_at,
+  };
 }
 
 /** Create a new instructor account */
@@ -38,48 +33,46 @@ export async function createInstructor(
 ): Promise<
   { success: true; data: AuthResponse } | { success: false; error: string }
 > {
-  // Check for duplicate email
-  if (emailExists(input.email)) {
+  const email = input.email.toLowerCase().trim();
+  const { error: createError } = await supabaseAdmin.auth.admin.createUser({
+    email,
+    password: input.password,
+    email_confirm: true,
+    user_metadata: {
+      name: input.name,
+    },
+  });
+
+  if (createError) {
+    const message = createError.message.toLowerCase();
+    if (message.includes("already registered") || message.includes("already exists")) {
+      return { success: false, error: "An account with this email already exists" };
+    }
+    return { success: false, error: createError.message };
+  }
+
+  const { data: signInData, error: signInError } =
+    await supabaseAuth.auth.signInWithPassword({
+      email,
+      password: input.password,
+    });
+
+  if (signInError || !signInData.session || !signInData.user) {
     return {
       success: false,
-      error: "An account with this email already exists",
+      error: "Account created, but automatic sign-in failed. Please log in.",
     };
   }
 
-  const id = nanoid();
-  const passwordHash = await hashPassword(input.password);
-  const now = new Date().toISOString();
-
-  try {
-    const db = getDb();
-    db.run(
-      `INSERT INTO instructors (id, email, password_hash, name, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [id, input.email.toLowerCase(), passwordHash, input.name, now, now]
-    );
-  } catch (error) {
-    console.error("Database error creating instructor:", error);
-    // Check for UNIQUE constraint violation (race condition)
-    if (error instanceof Error && error.message.includes("UNIQUE")) {
-      return {
-        success: false,
-        error: "An account with this email already exists",
-      };
-    }
-    throw error; // Re-throw other errors to be caught by route handler
-  }
-
-  const instructor: Instructor = {
-    id,
-    email: input.email.toLowerCase(),
-    name: input.name,
-    createdAt: now,
-    updatedAt: now,
+  const instructor = mapUserToInstructor(signInData.user);
+  return {
+    success: true,
+    data: {
+      instructor,
+      token: signInData.session.access_token,
+      refreshToken: signInData.session.refresh_token,
+    },
   };
-
-  const token = await generateToken(id, instructor.email);
-
-  return { success: true, data: { instructor, token } };
 }
 
 /** Authenticate an instructor and return token */
@@ -88,38 +81,23 @@ export async function authenticateInstructor(
 ): Promise<
   { success: true; data: AuthResponse } | { success: false; error: string }
 > {
-  const db = getDb();
-  const row = db
-    .query<InstructorRow, [string]>(
-      `SELECT id, email, password_hash, name, created_at, updated_at
-       FROM instructors WHERE LOWER(email) = LOWER(?)`
-    )
-    .get(input.email);
+  const email = input.email.toLowerCase().trim();
+  const { data, error } = await supabaseAuth.auth.signInWithPassword({
+    email,
+    password: input.password,
+  });
 
-  if (!row) {
+  if (error || !data.session || !data.user) {
     return { success: false, error: "Invalid email or password" };
   }
 
-  const validPassword = await verifyPassword(input.password, row.password_hash);
-  if (!validPassword) {
-    return { success: false, error: "Invalid email or password" };
-  }
-
-  const instructor = rowToInstructor(row);
-  const token = await generateToken(instructor.id, instructor.email);
-
-  return { success: true, data: { instructor, token } };
-}
-
-/** Get an instructor by ID */
-export function getInstructorById(id: string): Instructor | null {
-  const db = getDb();
-  const row = db
-    .query<InstructorRow, [string]>(
-      `SELECT id, email, password_hash, name, created_at, updated_at
-       FROM instructors WHERE id = ?`
-    )
-    .get(id);
-
-  return row ? rowToInstructor(row) : null;
+  const instructor = mapUserToInstructor(data.user);
+  return {
+    success: true,
+    data: {
+      instructor,
+      token: data.session.access_token,
+      refreshToken: data.session.refresh_token,
+    },
+  };
 }

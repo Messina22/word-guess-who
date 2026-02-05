@@ -58,7 +58,7 @@ class SessionManager {
     randomSecretWords: boolean = false,
     sharedComputerMode: boolean = false
   ): Promise<GameSession | { error: string }> {
-    const config = getConfig(configId);
+    const config = await getConfig(configId);
     if (!config) {
       return { error: "Configuration not found" };
     }

@@ -74,10 +74,10 @@ export interface ApiResponse<T = unknown> {
 export interface GameConfigRow {
   id: string;
   name: string;
-  config_json: string;
+  config_json: GameConfigInput | string;
   owner_id: string | null;
-  is_system_template: number;
-  is_public: number;
+  is_system_template: boolean;
+  is_public: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -95,20 +95,11 @@ export interface Instructor {
   updatedAt: string;
 }
 
-/** Database row representation of an instructor */
-export interface InstructorRow {
-  id: string;
-  email: string;
-  password_hash: string;
-  name: string;
-  created_at: string;
-  updated_at: string;
-}
-
 /** Auth response with instructor and token */
 export interface AuthResponse {
   instructor: Instructor;
   token: string;
+  refreshToken?: string;
 }
 
 /** Input for instructor registration */

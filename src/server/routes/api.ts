@@ -8,7 +8,6 @@ import {
   deleteConfig,
 } from "../config-manager";
 import { extractTokenFromHeader, verifyToken } from "../auth";
-import { getInstructorById } from "../instructor-manager";
 import { jsonResponse } from "../utils/response";
 
 /** Handle OPTIONS preflight requests */
@@ -31,10 +30,10 @@ async function getInstructorFromRequest(
   const token = extractTokenFromHeader(authHeader);
   if (!token) return null;
 
-  const payload = await verifyToken(token);
-  if (!payload) return null;
+  const instructor = await verifyToken(token);
+  if (!instructor) return null;
 
-  return getInstructorById(payload.instructorId);
+  return instructor;
 }
 
 /** GET /api/configs - List public configurations and system templates */
@@ -43,15 +42,15 @@ export async function handleListConfigs(request: Request): Promise<Response> {
 
   // If authenticated, include instructor's own configs too
   const configs = instructor
-    ? listConfigs(instructor.id)
-    : listPublicConfigs();
+    ? await listConfigs(instructor.id)
+    : await listPublicConfigs();
 
   return jsonResponse<GameConfig[]>({ success: true, data: configs });
 }
 
 /** GET /api/configs/:id - Get a single configuration */
-export function handleGetConfig(id: string): Response {
-  const config = getConfig(id);
+export async function handleGetConfig(id: string): Promise<Response> {
+  const config = await getConfig(id);
   if (!config) {
     return jsonResponse<null>(
       { success: false, error: `Config '${id}' not found` },
@@ -81,7 +80,7 @@ export async function handleCreateConfig(request: Request): Promise<Response> {
     );
   }
 
-  const result = createConfig(body as any, instructor.id);
+  const result = await createConfig(body as any, instructor.id);
   if (!result.success) {
     return jsonResponse<null>(
       { success: false, errors: result.errors },
@@ -106,7 +105,7 @@ export async function handleUpdateConfig(
   }
 
   // Check ownership before parsing body
-  const existing = getConfig(id);
+  const existing = await getConfig(id);
   if (!existing) {
     return jsonResponse<null>(
       { success: false, error: `Config '${id}' not found` },
@@ -138,7 +137,7 @@ export async function handleUpdateConfig(
     );
   }
 
-  const result = updateConfig(id, body as any, instructor.id);
+  const result = await updateConfig(id, body as any, instructor.id);
   if (!result.success) {
     const is404 = result.errors.some((e) => e.includes("not found"));
     return jsonResponse<null>(
@@ -164,7 +163,7 @@ export async function handleDeleteConfig(
   }
 
   // Check ownership
-  const existing = getConfig(id);
+  const existing = await getConfig(id);
   if (!existing) {
     return jsonResponse<null>(
       { success: false, error: `Config '${id}' not found` },
@@ -186,7 +185,7 @@ export async function handleDeleteConfig(
     );
   }
 
-  const result = deleteConfig(id, instructor.id);
+  const result = await deleteConfig(id, instructor.id);
   if (!result.success) {
     return jsonResponse<null>({ success: false, error: result.error }, 400);
   }

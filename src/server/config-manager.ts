@@ -1,6 +1,6 @@
 import { readdir, readFile } from "fs/promises";
 import { join, basename } from "path";
-import { getDb } from "./db";
+import { supabaseAdmin } from "./supabase";
 import type { GameConfig, GameConfigInput, GameConfigRow } from "@shared/types";
 import {
   validateGameConfigInput,
@@ -8,80 +8,127 @@ import {
 } from "@shared/validation";
 
 const CONFIGS_DIR = join(import.meta.dir, "../../configs");
+const GAME_CONFIG_COLUMNS =
+  "id, name, config_json, owner_id, is_system_template, is_public, created_at, updated_at";
 
 /** Convert a database row to a GameConfig object */
-function rowToConfig(row: GameConfigRow): GameConfig {
-  const config = JSON.parse(row.config_json);
+function parseConfigJson(value: unknown): GameConfigInput | null {
+  if (typeof value === "string") {
+    try {
+      return JSON.parse(value) as GameConfigInput;
+    } catch (error) {
+      console.error("Invalid config_json value:", error);
+      return null;
+    }
+  }
+  if (value && typeof value === "object") {
+    return value as GameConfigInput;
+  }
+  return null;
+}
+
+function rowToConfig(row: GameConfigRow): GameConfig | null {
+  const config = parseConfigJson(row.config_json);
+  if (!config) return null;
+
   return {
     ...config,
     id: row.id,
     ownerId: row.owner_id,
-    isSystemTemplate: row.is_system_template === 1,
-    isPublic: row.is_public === 1,
+    isSystemTemplate: row.is_system_template,
+    isPublic: row.is_public,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
 }
 
+async function getConfigRow(id: string): Promise<GameConfigRow | null> {
+  const { data, error } = await supabaseAdmin
+    .from("game_configs")
+    .select(GAME_CONFIG_COLUMNS)
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error) {
+    console.error("Error fetching config row:", error);
+    return null;
+  }
+
+  return data ?? null;
+}
+
 /** List game configurations visible to an instructor (their own + public + system) */
-export function listConfigs(instructorId?: string): GameConfig[] {
-  const db = getDb();
-  const rows = db
-    .query<GameConfigRow, [string | null]>(
-      `SELECT id, name, config_json, owner_id, is_system_template, is_public, created_at, updated_at
-       FROM game_configs
-       WHERE is_system_template = 1
-          OR is_public = 1
-          OR owner_id = ?
-       ORDER BY updated_at DESC`
+export async function listConfigs(instructorId?: string): Promise<GameConfig[]> {
+  if (!instructorId) {
+    return listPublicConfigs();
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from("game_configs")
+    .select(GAME_CONFIG_COLUMNS)
+    .or(
+      `is_system_template.eq.true,is_public.eq.true,owner_id.eq.${instructorId}`
     )
-    .all(instructorId ?? null);
-  return rows.map(rowToConfig);
+    .order("updated_at", { ascending: false });
+
+  if (error) {
+    console.error("Error listing configs:", error);
+    return [];
+  }
+
+  return (data ?? [])
+    .map(rowToConfig)
+    .filter((config): config is GameConfig => Boolean(config));
 }
 
 /** List only public configurations and system templates (for unauthenticated users) */
-export function listPublicConfigs(): GameConfig[] {
-  const db = getDb();
-  const rows = db
-    .query<GameConfigRow, []>(
-      `SELECT id, name, config_json, owner_id, is_system_template, is_public, created_at, updated_at
-       FROM game_configs
-       WHERE is_system_template = 1 OR is_public = 1
-       ORDER BY updated_at DESC`
-    )
-    .all();
-  return rows.map(rowToConfig);
+export async function listPublicConfigs(): Promise<GameConfig[]> {
+  const { data, error } = await supabaseAdmin
+    .from("game_configs")
+    .select(GAME_CONFIG_COLUMNS)
+    .or("is_system_template.eq.true,is_public.eq.true")
+    .order("updated_at", { ascending: false });
+
+  if (error) {
+    console.error("Error listing public configs:", error);
+    return [];
+  }
+
+  return (data ?? [])
+    .map(rowToConfig)
+    .filter((config): config is GameConfig => Boolean(config));
 }
 
 /** Get a single game configuration by ID (any config, for students entering codes) */
-export function getConfig(id: string): GameConfig | null {
-  const db = getDb();
-  const row = db
-    .query<GameConfigRow, [string]>(
-      `SELECT id, name, config_json, owner_id, is_system_template, is_public, created_at, updated_at
-       FROM game_configs WHERE id = ?`
-    )
-    .get(id);
+export async function getConfig(id: string): Promise<GameConfig | null> {
+  const row = await getConfigRow(id);
   return row ? rowToConfig(row) : null;
 }
 
 /** Check if a config with the given ID exists */
-export function configExists(id: string): boolean {
-  const db = getDb();
-  const row = db
-    .query<{ count: number }, [string]>(
-      "SELECT COUNT(*) as count FROM game_configs WHERE id = ?"
-    )
-    .get(id);
-  return (row?.count ?? 0) > 0;
+export async function configExists(id: string): Promise<boolean> {
+  const { data, error } = await supabaseAdmin
+    .from("game_configs")
+    .select("id")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error) {
+    console.error("Error checking config existence:", error);
+    return false;
+  }
+
+  return Boolean(data);
 }
 
 /** Create a new game configuration */
-export function createConfig(
+export async function createConfig(
   input: GameConfigInput & { isPublic?: boolean },
   ownerId?: string,
   isSystemTemplate = false
-): { success: true; data: GameConfig } | { success: false; errors: string[] } {
+): Promise<
+  { success: true; data: GameConfig } | { success: false; errors: string[] }
+> {
   // Validate input
   const validation = validateGameConfigInput(input);
   if (!validation.success) {
@@ -98,7 +145,7 @@ export function createConfig(
   const id = validInput.id || generatedId;
 
   // Check for duplicate ID
-  if (configExists(id)) {
+  if (await configExists(id)) {
     return { success: false, errors: [`Config with ID '${id}' already exists`] };
   }
 
@@ -117,33 +164,44 @@ export function createConfig(
   };
 
   // Store in database (config_json excludes id, timestamps, and ownership since they're in columns)
-  const configJson = JSON.stringify({
+  const configPayload = {
     name: config.name,
     description: config.description,
     author: config.author,
     wordBank: config.wordBank,
     suggestedQuestions: config.suggestedQuestions,
     settings: config.settings,
+  };
+
+  const { error } = await supabaseAdmin.from("game_configs").insert({
+    id: config.id,
+    name: config.name,
+    config_json: configPayload,
+    owner_id: config.ownerId,
+    is_system_template: config.isSystemTemplate,
+    is_public: config.isPublic,
+    created_at: config.createdAt,
+    updated_at: config.updatedAt,
   });
 
-  const db = getDb();
-  db.run(
-    `INSERT INTO game_configs (id, name, config_json, owner_id, is_system_template, is_public, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    [config.id, config.name, configJson, config.ownerId, isSystemTemplate ? 1 : 0, isPublic ? 1 : 0, config.createdAt, config.updatedAt]
-  );
+  if (error) {
+    console.error("Error creating config:", error);
+    return { success: false, errors: [error.message] };
+  }
 
   return { success: true, data: config };
 }
 
 /** Update an existing game configuration */
-export function updateConfig(
+export async function updateConfig(
   id: string,
   input: GameConfigInput & { isPublic?: boolean },
   instructorId?: string
-): { success: true; data: GameConfig } | { success: false; errors: string[] } {
+): Promise<
+  { success: true; data: GameConfig } | { success: false; errors: string[] }
+> {
   // Check if config exists
-  const existing = getConfig(id);
+  const existing = await getConfig(id);
   if (!existing) {
     return { success: false, errors: [`Config with ID '${id}' not found`] };
   }
@@ -167,7 +225,7 @@ export function updateConfig(
 
   // If ID is being changed, check for conflicts
   const newId = validInput.id || id;
-  if (newId !== id && configExists(newId)) {
+  if (newId !== id && (await configExists(newId))) {
     return { success: false, errors: [`Config with ID '${newId}' already exists`] };
   }
 
@@ -186,43 +244,70 @@ export function updateConfig(
     updatedAt: now,
   };
 
-  const configJson = JSON.stringify({
+  const configPayload = {
     name: config.name,
     description: config.description,
     author: config.author,
     wordBank: config.wordBank,
     suggestedQuestions: config.suggestedQuestions,
     settings: config.settings,
-  });
-
-  const db = getDb();
+  };
 
   if (newId !== id) {
     // ID changed: delete old, insert new
-    db.run("DELETE FROM game_configs WHERE id = ?", [id]);
-    db.run(
-      `INSERT INTO game_configs (id, name, config_json, owner_id, is_system_template, is_public, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [config.id, config.name, configJson, config.ownerId, config.isSystemTemplate ? 1 : 0, config.isPublic ? 1 : 0, config.createdAt, config.updatedAt]
-    );
+    const { error: deleteError } = await supabaseAdmin
+      .from("game_configs")
+      .delete()
+      .eq("id", id);
+
+    if (deleteError) {
+      console.error("Error deleting old config:", deleteError);
+      return { success: false, errors: [deleteError.message] };
+    }
+
+    const { error: insertError } = await supabaseAdmin.from("game_configs").insert({
+      id: config.id,
+      name: config.name,
+      config_json: configPayload,
+      owner_id: config.ownerId,
+      is_system_template: config.isSystemTemplate,
+      is_public: config.isPublic,
+      created_at: config.createdAt,
+      updated_at: config.updatedAt,
+    });
+
+    if (insertError) {
+      console.error("Error inserting updated config:", insertError);
+      return { success: false, errors: [insertError.message] };
+    }
   } else {
     // Same ID: update in place
-    db.run(
-      `UPDATE game_configs SET name = ?, config_json = ?, is_public = ?, updated_at = ? WHERE id = ?`,
-      [config.name, configJson, config.isPublic ? 1 : 0, config.updatedAt, id]
-    );
+    const { error: updateError } = await supabaseAdmin
+      .from("game_configs")
+      .update({
+        name: config.name,
+        config_json: configPayload,
+        is_public: config.isPublic,
+        updated_at: config.updatedAt,
+      })
+      .eq("id", id);
+
+    if (updateError) {
+      console.error("Error updating config:", updateError);
+      return { success: false, errors: [updateError.message] };
+    }
   }
 
   return { success: true, data: config };
 }
 
 /** Delete a game configuration */
-export function deleteConfig(
+export async function deleteConfig(
   id: string,
   instructorId?: string
-): { success: true } | { success: false; error: string } {
+): Promise<{ success: true } | { success: false; error: string }> {
   // Check if config exists
-  const existing = getConfig(id);
+  const existing = await getConfig(id);
   if (!existing) {
     return { success: false, error: `Config with ID '${id}' not found` };
   }
@@ -236,8 +321,11 @@ export function deleteConfig(
     return { success: false, error: "You do not have permission to delete this configuration" };
   }
 
-  const db = getDb();
-  db.run("DELETE FROM game_configs WHERE id = ?", [id]);
+  const { error } = await supabaseAdmin.from("game_configs").delete().eq("id", id);
+  if (error) {
+    console.error("Error deleting config:", error);
+    return { success: false, error: error.message };
+  }
   return { success: true };
 }
 
@@ -266,9 +354,9 @@ export async function loadConfigsFromFiles(): Promise<void> {
         };
 
         // Only load if not already in database
-        if (!configExists(configInput.id!)) {
+        if (!(await configExists(configInput.id!))) {
           // Mark configs loaded from files as system templates (no owner, public)
-          const result = createConfig(configInput, undefined, true);
+          const result = await createConfig(configInput, undefined, true);
           if (result.success) {
             console.log(`Loaded system template from ${file}`);
           } else {
@@ -276,12 +364,16 @@ export async function loadConfigsFromFiles(): Promise<void> {
           }
         } else {
           // Update existing config to be a system template if it was loaded from a file before
-          const db = getDb();
           const configId = configInput.id!;
-          db.run(
-            "UPDATE game_configs SET is_system_template = 1, is_public = 1 WHERE id = ? AND owner_id IS NULL",
-            [configId]
-          );
+          const { error } = await supabaseAdmin
+            .from("game_configs")
+            .update({ is_system_template: true, is_public: true })
+            .eq("id", configId)
+            .is("owner_id", null);
+
+          if (error) {
+            console.error(`Failed to update system template ${configId}:`, error);
+          }
         }
       } catch (err) {
         console.error(`Error loading ${file}:`, err);

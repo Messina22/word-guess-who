@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Word Guess Who is a web-based two-player educational game for practicing sight & spelling words. Players compete to guess each other's secret word by asking yes/no questions about letter patterns, sounds, and word characteristics.
 
-**Tech Stack:** Bun runtime, TypeScript, React 18, Tailwind CSS, SQLite via `bun:sqlite`, WebSockets for real-time multiplayer.
+**Tech Stack:** Bun runtime, TypeScript, React 18, Tailwind CSS, Supabase (Postgres + Auth), WebSockets for real-time multiplayer.
 
 ## Commands
 
@@ -38,7 +38,7 @@ bun run typecheck    # TypeScript type checking
 - `src/server/config-manager.ts` - CRUD operations for game configs, loads JSON from `configs/` on startup
 - `src/server/session-manager.ts` - WebSocket session management, game rooms, message broadcasting
 - `src/server/game-engine.ts` - Core game logic (turns, questions, guesses, win detection, word selection)
-- `src/server/db.ts` - SQLite connection with WAL mode, schema initialization
+- `src/server/supabase.ts` - Supabase clients (admin + auth)
 
 ### Client Structure
 
@@ -77,7 +77,7 @@ bun run typecheck    # TypeScript type checking
 
 ### Data Flow
 
-1. JSON config files in `configs/` are loaded into SQLite on server startup (if not already present)
+1. JSON config files in `configs/` are loaded into Supabase on server startup (if not already present)
 2. Full config stored as JSON blob in `config_json` column, with `id`, `name`, timestamps in separate columns
 3. API responses wrapped in `ApiResponse<T>` with `success`, `data`, `error`/`errors` fields
 4. Game sessions stored in memory (SessionManager), not persisted to database
@@ -111,7 +111,7 @@ bun run typecheck    # TypeScript type checking
 
 ## Development Notes
 
-- Database stored at `data/game.db` (gitignored)
+- Supabase credentials required via `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
 - Default config with 24 Dolch sight words loaded from `configs/default.json`
 - CORS is permissive (`*`) for development
 - In production, server serves static files from `dist/client/`

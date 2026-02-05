@@ -25,7 +25,7 @@ A web-based educational game inspired by the classic "Guess Who" board game, usi
 - **Language**: TypeScript
 - **Frontend**: React 18 + React Router 6
 - **Build Tool**: Vite
-- **Database**: SQLite (via Bun's native `bun:sqlite`)
+- **Database**: Supabase (Postgres + Auth)
 - **Styling**: Tailwind CSS with custom "bulletin board" theme
 - **Real-time**: WebSockets for multiplayer gameplay
 
@@ -43,6 +43,18 @@ bun run dev:client   # Vite dev server on port 5173
 bun run dev:all
 
 # Open http://localhost:5173 in your browser
+```
+
+## Supabase Setup
+
+1. Create a Supabase project.
+2. Run the SQL in `supabase-schema.sql` to create the `game_configs` table.
+3. Copy `.env.example` to `.env` and set the required variables:
+
+```bash
+SUPABASE_URL=your-project-url
+SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 ```
 
 ## Scripts
@@ -108,7 +120,6 @@ src/
 │   └── index.css           # Tailwind + custom styles
 ├── server/                 # Bun HTTP server
 │   ├── index.ts            # Server entry point
-│   ├── db.ts               # SQLite database
 │   ├── config-manager.ts   # Game configuration CRUD
 │   ├── session-manager.ts  # WebSocket game sessions
 │   ├── game-engine.ts      # Core game logic
@@ -119,7 +130,7 @@ src/
     ├── types.ts            # TypeScript interfaces
     └── validation.ts       # Zod schemas
 configs/                    # Game configuration JSON files
-data/                       # SQLite database (gitignored)
+supabase-schema.sql         # Supabase schema for game configs
 dist/                       # Production builds (gitignored)
 ```
 

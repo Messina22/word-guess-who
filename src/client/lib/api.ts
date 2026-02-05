@@ -13,6 +13,7 @@ import type {
 
 const API_BASE = "/api";
 const AUTH_TOKEN_KEY = "authToken";
+const REFRESH_TOKEN_KEY = "refreshToken";
 
 /** Get the stored auth token */
 export function getAuthToken(): string | null {
@@ -21,12 +22,31 @@ export function getAuthToken(): string | null {
 
 /** Set the auth token */
 export function setAuthToken(token: string): void {
-  localStorage.setItem(AUTH_TOKEN_KEY, token);
+  setAuthTokens(token);
 }
 
 /** Clear the auth token */
 export function clearAuthToken(): void {
+  clearAuthTokens();
+}
+
+/** Get the stored refresh token */
+export function getRefreshToken(): string | null {
+  return localStorage.getItem(REFRESH_TOKEN_KEY);
+}
+
+/** Set auth access + refresh tokens */
+export function setAuthTokens(token: string, refreshToken?: string): void {
+  localStorage.setItem(AUTH_TOKEN_KEY, token);
+  if (refreshToken) {
+    localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+  }
+}
+
+/** Clear auth access + refresh tokens */
+export function clearAuthTokens(): void {
   localStorage.removeItem(AUTH_TOKEN_KEY);
+  localStorage.removeItem(REFRESH_TOKEN_KEY);
 }
 
 /** Get auth headers if token exists */
@@ -77,6 +97,13 @@ export const api = {
       }),
 
     me: () => request<Instructor>("/auth/me"),
+
+    refresh: (refreshToken: string) =>
+      request<AuthResponse>("/auth/refresh", {
+        method: "POST",
+        body: JSON.stringify({ refreshToken }),
+        authenticated: false,
+      }),
   },
 
   configs: {

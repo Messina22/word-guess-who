@@ -9,7 +9,7 @@ import {
   handleDeleteConfig,
 } from "./routes/api";
 import { handleCreateGame, handleGetGame } from "./routes/game";
-import { handleRegister, handleLogin, handleMe } from "./routes/auth";
+import { handleRegister, handleLogin, handleMe, handleRefresh } from "./routes/auth";
 import { sessionManager, type WebSocketData } from "./session-manager";
 import type { ClientMessage } from "@shared/types";
 import { join } from "path";
@@ -165,6 +165,9 @@ async function handleRequest(
   }
   if (path === "/api/auth/me" && method === "GET") {
     return handleMe(request);
+  }
+  if (path === "/api/auth/refresh" && method === "POST") {
+    return handleRefresh(request);
   }
 
   // Config API routes

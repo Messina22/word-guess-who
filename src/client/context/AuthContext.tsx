@@ -7,7 +7,13 @@ import {
   type ReactNode,
 } from "react";
 import type { Instructor, RegisterInput, LoginInput } from "@shared/types";
-import { api, setAuthToken, clearAuthToken, getAuthToken } from "@client/lib/api";
+import {
+  api,
+  setAuthTokens,
+  clearAuthTokens,
+  getAuthToken,
+  getRefreshToken,
+} from "@client/lib/api";
 
 interface AuthState {
   instructor: Instructor | null;
@@ -46,7 +52,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isLoading: false,
       });
     } else {
-      clearAuthToken();
+      const refreshToken = getRefreshToken();
+      if (refreshToken) {
+        const refreshResponse = await api.auth.refresh(refreshToken);
+        if (refreshResponse.success && refreshResponse.data) {
+          setAuthTokens(
+            refreshResponse.data.token,
+            refreshResponse.data.refreshToken
+          );
+          setState({
+            instructor: refreshResponse.data.instructor,
+            isAuthenticated: true,
+            isLoading: false,
+          });
+          return;
+        }
+      }
+
+      clearAuthTokens();
       setState({ instructor: null, isAuthenticated: false, isLoading: false });
     }
   }, []);
@@ -58,7 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(async (input: LoginInput) => {
     const response = await api.auth.login(input);
     if (response.success && response.data) {
-      setAuthToken(response.data.token);
+      setAuthTokens(response.data.token, response.data.refreshToken);
       setState({
         instructor: response.data.instructor,
         isAuthenticated: true,
@@ -75,7 +98,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const register = useCallback(async (input: RegisterInput) => {
     const response = await api.auth.register(input);
     if (response.success && response.data) {
-      setAuthToken(response.data.token);
+      setAuthTokens(response.data.token, response.data.refreshToken);
       setState({
         instructor: response.data.instructor,
         isAuthenticated: true,
@@ -90,7 +113,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(() => {
-    clearAuthToken();
+    clearAuthTokens();
     setState({ instructor: null, isAuthenticated: false, isLoading: false });
   }, []);
 
