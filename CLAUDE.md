@@ -109,6 +109,34 @@ bun run typecheck    # TypeScript type checking
 | GET    | `/api/games/:code` | Get game session by code                    |
 | WS     | `/ws`              | WebSocket connection for real-time gameplay |
 
+## Deployment
+
+The app is deployed to [Fly.io](https://fly.io).
+
+### Fly.io Configuration
+
+- **App name**: `word-guess-who`
+- **Region**: `iad` (US East)
+- **Dockerfile**: Multi-stage build using `oven/bun:1` base image
+- **Persistent storage**: SQLite database mounted at `/app/data` via Fly volume
+
+### Deploy Commands
+
+```bash
+fly deploy              # Deploy to Fly.io
+fly logs                # View application logs
+fly ssh console         # SSH into the running machine
+fly volumes list        # List persistent volumes
+```
+
+### Build Process
+
+1. Install production dependencies
+2. Build client with Vite (`bun run build:client`)
+3. Copy source code (server runs from TypeScript with Bun)
+4. Copy built client assets to `dist/client/`
+5. Server starts on port 3000
+
 ## Development Notes
 
 - Database stored at `data/game.db` (gitignored)

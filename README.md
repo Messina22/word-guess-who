@@ -147,6 +147,33 @@ The UI features an "Elementary School Bulletin Board" aesthetic with:
 - Hand-drawn style fonts (Patrick Hand, Andika)
 - Card flip animations and confetti effects
 
+## Deployment
+
+The app is deployed to [Fly.io](https://fly.io) using a multi-stage Docker build.
+
+### Prerequisites
+
+- [Fly CLI](https://fly.io/docs/hands-on/install-flyctl/) installed
+- Fly.io account
+
+### Deploy
+
+```bash
+# First-time setup (already done for this app)
+fly launch
+
+# Create a persistent volume for SQLite
+fly volumes create data --region iad --size 1
+
+# Deploy
+fly deploy
+
+# View logs
+fly logs
+```
+
+The production app runs at: https://word-guess-who.fly.dev
+
 ## License
 
 MIT
