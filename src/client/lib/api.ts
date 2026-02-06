@@ -77,6 +77,20 @@ export const api = {
       }),
 
     me: () => request<Instructor>("/auth/me"),
+
+    forgotPassword: (email: string) =>
+      request<{ message: string }>("/auth/forgot-password", {
+        method: "POST",
+        body: JSON.stringify({ email }),
+        authenticated: false,
+      }),
+
+    resetPassword: (token: string, password: string) =>
+      request<{ message: string }>("/auth/reset-password", {
+        method: "POST",
+        body: JSON.stringify({ token, password }),
+        authenticated: false,
+      }),
   },
 
   configs: {

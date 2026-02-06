@@ -5,6 +5,7 @@ import { SessionGameLogProvider } from "@client/context/SessionGameLogContext";
 import { HomePage } from "@client/pages/HomePage";
 import { GamePage } from "@client/pages/GamePage";
 import { InstructorPage } from "@client/pages/InstructorPage";
+import { ResetPasswordPage } from "@client/pages/ResetPasswordPage";
 
 export function App() {
   return (
@@ -15,6 +16,7 @@ export function App() {
             <Routes>
               <Route path="/" element={<HomePage />} />
               <Route path="/instructor" element={<InstructorPage />} />
+              <Route path="/reset-password" element={<ResetPasswordPage />} />
               <Route path="/game/:code" element={<GamePage />} />
             </Routes>
           </GameProvider>

@@ -231,3 +231,56 @@ export function validateLoginInput(data: unknown): {
   });
   return { success: false, errors };
 }
+
+// ============================================
+// Forgot / Reset Password Validation
+// ============================================
+
+/** Schema for forgot password input */
+export const forgotPasswordInputSchema = z.object({
+  email: emailSchema,
+});
+
+/** Schema for reset password input */
+export const resetPasswordInputSchema = z.object({
+  token: z.string().min(1, "Reset token is required"),
+  password: passwordSchema,
+});
+
+/** Validate forgot password input */
+export function validateForgotPasswordInput(data: unknown): {
+  success: true;
+  data: { email: string };
+} | {
+  success: false;
+  errors: string[];
+} {
+  const result = forgotPasswordInputSchema.safeParse(data);
+  if (result.success) {
+    return { success: true, data: result.data };
+  }
+  const errors = result.error.errors.map((e) => {
+    const path = e.path.join(".");
+    return path ? `${path}: ${e.message}` : e.message;
+  });
+  return { success: false, errors };
+}
+
+/** Validate reset password input */
+export function validateResetPasswordInput(data: unknown): {
+  success: true;
+  data: { token: string; password: string };
+} | {
+  success: false;
+  errors: string[];
+} {
+  const result = resetPasswordInputSchema.safeParse(data);
+  if (result.success) {
+    return { success: true, data: result.data };
+  }
+  const errors = result.error.errors.map((e) => {
+    const path = e.path.join(".");
+    return path ? `${path}: ${e.message}` : e.message;
+  });
+  return { success: false, errors };
+}

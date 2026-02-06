@@ -1,4 +1,5 @@
 import { nanoid } from "nanoid";
+import { randomBytes, createHash } from "crypto";
 import { getDb } from "./db";
 import { hashPassword, verifyPassword, generateToken } from "./auth";
 import type {
@@ -122,4 +123,85 @@ export function getInstructorById(id: string): Instructor | null {
     .get(id);
 
   return row ? rowToInstructor(row) : null;
+}
+
+/** Get an instructor by email (case-insensitive) */
+export function getInstructorByEmail(email: string): Instructor | null {
+  const db = getDb();
+  const row = db
+    .query<InstructorRow, [string]>(
+      `SELECT id, email, password_hash, name, created_at, updated_at
+       FROM instructors WHERE LOWER(email) = LOWER(?)`
+    )
+    .get(email);
+
+  return row ? rowToInstructor(row) : null;
+}
+
+/** Hash a token with SHA-256 */
+function hashToken(token: string): string {
+  return createHash("sha256").update(token).digest("hex");
+}
+
+/** Create a password reset token for an instructor, invalidating any previous unused tokens */
+export function createPasswordResetToken(instructorId: string): string {
+  const db = getDb();
+  const token = randomBytes(32).toString("hex");
+  const tokenHash = hashToken(token);
+  const id = nanoid();
+  const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString(); // 1 hour
+
+  // Invalidate any previous unused tokens for this instructor
+  db.run(
+    `UPDATE password_reset_tokens SET used_at = datetime('now')
+     WHERE instructor_id = ? AND used_at IS NULL`,
+    [instructorId]
+  );
+
+  db.run(
+    `INSERT INTO password_reset_tokens (id, instructor_id, token_hash, expires_at)
+     VALUES (?, ?, ?, ?)`,
+    [id, instructorId, tokenHash, expiresAt]
+  );
+
+  return token;
+}
+
+/** Verify a reset token — returns instructor ID if valid, null otherwise */
+export function verifyResetToken(token: string): string | null {
+  const db = getDb();
+  const tokenHash = hashToken(token);
+  const row = db
+    .query<{ instructor_id: string; expires_at: string; used_at: string | null }, [string]>(
+      `SELECT instructor_id, expires_at, used_at FROM password_reset_tokens
+       WHERE token_hash = ?`
+    )
+    .get(tokenHash);
+
+  if (!row) return null;
+  if (row.used_at) return null;
+  if (new Date(row.expires_at) < new Date()) return null;
+
+  return row.instructor_id;
+}
+
+/** Mark a reset token as used */
+export function consumeResetToken(token: string): void {
+  const db = getDb();
+  const tokenHash = hashToken(token);
+  db.run(
+    `UPDATE password_reset_tokens SET used_at = datetime('now')
+     WHERE token_hash = ?`,
+    [tokenHash]
+  );
+}
+
+/** Update an instructor's password */
+export function updateInstructorPassword(instructorId: string, newPasswordHash: string): void {
+  const db = getDb();
+  db.run(
+    `UPDATE instructors SET password_hash = ?, updated_at = datetime('now')
+     WHERE id = ?`,
+    [newPasswordHash, instructorId]
+  );
 }

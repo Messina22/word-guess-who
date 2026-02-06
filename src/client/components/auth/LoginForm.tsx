@@ -4,9 +4,10 @@ import { useAuth } from "@client/context/AuthContext";
 interface LoginFormProps {
   onSuccess?: () => void;
   onSwitchToRegister: () => void;
+  onSwitchToForgotPassword: () => void;
 }
 
-export function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormProps) {
+export function LoginForm({ onSuccess, onSwitchToRegister, onSwitchToForgotPassword }: LoginFormProps) {
   const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -58,6 +59,16 @@ export function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormProps) {
           required
           autoComplete="current-password"
         />
+      </div>
+
+      <div className="text-right">
+        <button
+          type="button"
+          onClick={onSwitchToForgotPassword}
+          className="text-sm text-crayon-blue underline hover:no-underline"
+        >
+          Forgot password?
+        </button>
       </div>
 
       {error && (
