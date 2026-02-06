@@ -14,7 +14,7 @@ export function CreateGameForm() {
     error: string | null;
   }>({ loading: false, config: null, error: null });
   const [playerName, setPlayerName] = useState("");
-  const [gameMode, setGameMode] = useState<GameMode>("online");
+  const [gameMode, setGameMode] = useState<GameMode>("shared");
   const [showOnlyLastQuestion, setShowOnlyLastQuestion] = useState(false);
   const [randomSecretWords, setRandomSecretWords] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -173,15 +173,17 @@ export function CreateGameForm() {
             <input
               type="radio"
               name="gameMode"
-              value="online"
-              checked={gameMode === "online"}
-              onChange={() => setGameMode("online")}
+              value="shared"
+              checked={gameMode === "shared"}
+              onChange={() => setGameMode("shared")}
               className="w-5 h-5 border-pencil/30 text-crayon-blue focus:ring-crayon-blue"
             />
             <div>
-              <span className="font-ui text-sm text-pencil">Online Mode</span>
+              <span className="font-ui text-sm text-pencil">
+                Shared Computer Mode
+              </span>
               <p className="font-ui text-xs text-pencil/60">
-                Play online with another player on their own device
+                Both players share one computer and pass it between turns
               </p>
             </div>
           </label>
@@ -209,17 +211,15 @@ export function CreateGameForm() {
             <input
               type="radio"
               name="gameMode"
-              value="shared"
-              checked={gameMode === "shared"}
-              onChange={() => setGameMode("shared")}
+              value="online"
+              checked={gameMode === "online"}
+              onChange={() => setGameMode("online")}
               className="w-5 h-5 border-pencil/30 text-crayon-blue focus:ring-crayon-blue"
             />
             <div>
-              <span className="font-ui text-sm text-pencil">
-                Shared Computer Mode
-              </span>
+              <span className="font-ui text-sm text-pencil">Online Mode</span>
               <p className="font-ui text-xs text-pencil/60">
-                Both players share one computer and pass it between turns
+                Play online with another player on their own device
               </p>
             </div>
           </label>
