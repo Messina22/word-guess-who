@@ -22,7 +22,7 @@ export function getAuthToken(): string | null {
 
 /** Set the auth token */
 export function setAuthToken(token: string): void {
-  setAuthTokens(token);
+  localStorage.setItem(AUTH_TOKEN_KEY, token);
 }
 
 /** Clear the auth token */
@@ -40,6 +40,9 @@ export function setAuthTokens(token: string, refreshToken?: string): void {
   localStorage.setItem(AUTH_TOKEN_KEY, token);
   if (refreshToken) {
     localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+  } else {
+    // Clear stale refresh token to prevent using an invalidated token
+    localStorage.removeItem(REFRESH_TOKEN_KEY);
   }
 }
 
