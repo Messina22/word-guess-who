@@ -92,6 +92,24 @@ function initSchema(db: Database): void {
     CREATE INDEX IF NOT EXISTS idx_game_configs_owner_id
     ON game_configs(owner_id)
   `);
+
+  // Create password reset tokens table
+  db.run(`
+    CREATE TABLE IF NOT EXISTS password_reset_tokens (
+      id TEXT PRIMARY KEY,
+      instructor_id TEXT NOT NULL,
+      token_hash TEXT NOT NULL,
+      expires_at TEXT NOT NULL,
+      used_at TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (instructor_id) REFERENCES instructors(id) ON DELETE CASCADE
+    )
+  `);
+
+  db.run(`
+    CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_instructor_id
+    ON password_reset_tokens(instructor_id)
+  `);
 }
 
 /** Close the database connection */

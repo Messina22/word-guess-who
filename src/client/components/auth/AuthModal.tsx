@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { LoginForm } from "./LoginForm";
 import { RegisterForm } from "./RegisterForm";
+import { ForgotPasswordForm } from "./ForgotPasswordForm";
+
+type AuthMode = "login" | "register" | "forgot-password";
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -9,7 +12,7 @@ interface AuthModalProps {
 }
 
 export function AuthModal({ isOpen, onClose, initialMode = "login" }: AuthModalProps) {
-  const [mode, setMode] = useState<"login" | "register">(initialMode);
+  const [mode, setMode] = useState<AuthMode>(initialMode);
 
   useEffect(() => {
     setMode(initialMode);
@@ -57,17 +60,22 @@ export function AuthModal({ isOpen, onClose, initialMode = "login" }: AuthModalP
         </button>
 
         <h2 className="font-display text-2xl text-pencil mb-6 text-center">
-          {mode === "login" ? "Sign In" : "Create Account"}
+          {mode === "login" ? "Sign In" : mode === "register" ? "Create Account" : "Reset Password"}
         </h2>
 
         {mode === "login" ? (
           <LoginForm
             onSuccess={handleSuccess}
             onSwitchToRegister={() => setMode("register")}
+            onSwitchToForgotPassword={() => setMode("forgot-password")}
           />
-        ) : (
+        ) : mode === "register" ? (
           <RegisterForm
             onSuccess={handleSuccess}
+            onSwitchToLogin={() => setMode("login")}
+          />
+        ) : (
+          <ForgotPasswordForm
             onSwitchToLogin={() => setMode("login")}
           />
         )}
