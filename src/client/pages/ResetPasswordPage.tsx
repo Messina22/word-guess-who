@@ -65,7 +65,11 @@ export function ResetPasswordPage() {
     if (result.success) {
       setSuccess(true);
     } else {
-      setError(result.error || "Failed to reset password. The link may have expired.");
+      setError(
+        result.error ||
+          (result.errors?.length ? result.errors.join(". ") : null) ||
+          "Failed to reset password. The link may have expired."
+      );
     }
   };
 

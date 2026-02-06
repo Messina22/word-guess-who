@@ -6,6 +6,16 @@ const FROM_EMAIL = process.env.FROM_EMAIL || "Word Guess Who <noreply@wordguessw
 
 const resend = RESEND_API_KEY ? new Resend(RESEND_API_KEY) : null;
 
+/** Escape HTML special characters to prevent injection */
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 /** Send a password reset email (or log to console in dev) */
 export async function sendPasswordResetEmail(
   to: string,
@@ -31,7 +41,7 @@ export async function sendPasswordResetEmail(
     html: `
       <div style="font-family: system-ui, -apple-system, sans-serif; max-width: 480px; margin: 0 auto; padding: 24px;">
         <h2 style="color: #1e293b;">Reset Your Password</h2>
-        <p>Hi ${instructorName},</p>
+        <p>Hi ${escapeHtml(instructorName)},</p>
         <p>We received a request to reset your Word Guess Who password. Click the button below to set a new password:</p>
         <div style="text-align: center; margin: 32px 0;">
           <a href="${resetUrl}" style="display: inline-block; background: #2563eb; color: white; padding: 12px 32px; border-radius: 8px; text-decoration: none; font-weight: 600;">

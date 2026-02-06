@@ -239,9 +239,12 @@ export async function handleResetPassword(request: Request): Promise<Response> {
       );
     }
 
+    // Consume token immediately to prevent race condition (TOCTOU)
+    // before the async hashPassword yields control
+    consumeResetToken(token);
+
     const newPasswordHash = await hashPassword(password);
     updateInstructorPassword(instructorId, newPasswordHash);
-    consumeResetToken(token);
 
     return jsonResponse<{ message: string }>({
       success: true,
