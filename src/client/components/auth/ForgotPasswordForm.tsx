@@ -22,7 +22,11 @@ export function ForgotPasswordForm({ onSwitchToLogin }: ForgotPasswordFormProps)
     if (result.success) {
       setSubmitted(true);
     } else {
-      setError(result.error || "Something went wrong. Please try again.");
+      setError(
+        result.error ||
+          (result.errors?.length ? result.errors.join(". ") : null) ||
+          "Something went wrong. Please try again."
+      );
     }
   };
 
