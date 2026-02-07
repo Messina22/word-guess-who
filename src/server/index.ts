@@ -236,7 +236,8 @@ async function main() {
     },
     websocket: {
       open(ws: ServerWebSocket<WebSocketData>) {
-        // Connection opened, waiting for join_game message
+        // Register the socket for heartbeat tracking
+        sessionManager.registerSocket(ws);
       },
       message(ws: ServerWebSocket<WebSocketData>, message: string | Buffer) {
         try {
@@ -251,8 +252,15 @@ async function main() {
       close(ws: ServerWebSocket<WebSocketData>) {
         sessionManager.handleDisconnect(ws);
       },
+      pong(ws: ServerWebSocket<WebSocketData>) {
+        // Client responded to our ping — mark the socket as alive
+        sessionManager.handlePong(ws);
+      },
     },
   });
+
+  // Start the WebSocket heartbeat to detect stale connections
+  sessionManager.startHeartbeat();
 
   console.log(`Server running at http://localhost:${server.port}`);
   console.log(`WebSocket available at ws://localhost:${server.port}/ws`);
