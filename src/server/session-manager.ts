@@ -269,6 +269,11 @@ class SessionManager {
 
     if (!gameCode || !playerId) return;
 
+    // Clear connection info to prevent duplicate processing
+    // (e.g., when handleDisconnect is called explicitly before socket.close())
+    ws.data.gameCode = null;
+    ws.data.playerId = null;
+
     const room = this.rooms.get(gameCode);
     if (!room) return;
 
