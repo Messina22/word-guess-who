@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Word Guess Who is a web-based two-player educational game for practicing sight & spelling words. Players compete to guess each other's secret word by asking yes/no questions about letter patterns, sounds, and word characteristics.
 
-**Tech Stack:** Bun runtime, TypeScript, React 18, Tailwind CSS, SQLite via `bun:sqlite`, WebSockets for real-time multiplayer.
+**Tech Stack:** Bun runtime, TypeScript, React 18, Tailwind CSS, SQLite via `bun:sqlite`, WebSockets for real-time multiplayer, `jose` for JWT auth, `resend` for transactional email.
 
 ## Commands
 
@@ -39,17 +39,29 @@ bun run typecheck    # TypeScript type checking
 - `src/server/session-manager.ts` - WebSocket session management, game rooms, message broadcasting
 - `src/server/game-engine.ts` - Core game logic (turns, questions, guesses, win detection, word selection)
 - `src/server/db.ts` - SQLite connection with WAL mode, schema initialization
+- `src/server/auth.ts` - JWT token generation/verification, password hashing via `jose`
+- `src/server/instructor-manager.ts` - Instructor CRUD, password reset token management
+- `src/server/email.ts` - Password reset emails via `resend`
+- `src/server/evaluators.ts` - Word evaluator functions (letter checks, length, vowels, syllables, patterns) for automated question answering
+- `src/server/routes/auth.ts` - REST API handlers for `/api/auth` endpoints (register, login, forgot/reset password)
+- `src/server/utils/response.ts` - HTTP response helpers
 
 ### Client Structure
 
-- `src/client/App.tsx` - React Router setup with HomePage and GamePage routes
+- `src/client/App.tsx` - React Router setup with HomePage, GamePage, InstructorPage, and ResetPasswordPage routes
 - `src/client/context/GameContext.tsx` - Game state management via React Context + reducer
+- `src/client/context/AuthContext.tsx` - Instructor auth state, token management, login/logout/register
+- `src/client/context/SessionGameLogContext.tsx` - Tracks games played in the current browser session
 - `src/client/hooks/useGameState.ts` - Derived game state (isMyTurn, isPlaying, etc.)
 - `src/client/hooks/useGameActions.ts` - Game action wrappers (flipCard, askQuestion, etc.)
+- `src/client/hooks/useWebSocket.ts` - WebSocket connection hook
 - `src/client/lib/websocket.ts` - WebSocket client with reconnection
 - `src/client/lib/api.ts` - REST API client
 - `src/client/components/game/` - GameBoard, WordCard, QuestionPanel, QuestionLog, TurnIndicator, GameOverOverlay, WordSelectionScreen
-- `src/client/components/lobby/` - CreateGameForm, JoinGameForm, WaitingRoom
+- `src/client/components/lobby/` - CreateGameForm, JoinGameForm, WaitingRoom, GameSessionLog
+- `src/client/components/auth/` - AuthModal, LoginForm, RegisterForm, ForgotPasswordForm
+- `src/client/pages/InstructorPage.tsx` - Instructor dashboard
+- `src/client/pages/ResetPasswordPage.tsx` - Password reset flow
 
 ### Shared Code
 
@@ -101,6 +113,16 @@ bun run typecheck    # TypeScript type checking
 | PUT    | `/api/configs/:id` | Update configuration       |
 | DELETE | `/api/configs/:id` | Delete configuration       |
 
+### Auth API
+
+| Method | Endpoint                   | Description                      |
+| ------ | -------------------------- | -------------------------------- |
+| POST   | `/api/auth/register`       | Create instructor account        |
+| POST   | `/api/auth/login`          | Authenticate, returns JWT        |
+| GET    | `/api/auth/me`             | Get current instructor profile   |
+| POST   | `/api/auth/forgot-password`| Send password reset email        |
+| POST   | `/api/auth/reset-password` | Reset password with token        |
+
 ### Game Session API
 
 | Method | Endpoint           | Description                                 |
@@ -108,6 +130,17 @@ bun run typecheck    # TypeScript type checking
 | POST   | `/api/games`       | Create a new game session                   |
 | GET    | `/api/games/:code` | Get game session by code                    |
 | WS     | `/ws`              | WebSocket connection for real-time gameplay |
+
+## Environment Variables
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `PORT` | No | `3000` | Server port |
+| `NODE_ENV` | No | — | Set to `production` for prod builds |
+| `JWT_SECRET` | Yes (prod) | dev fallback | Secret for signing JWTs; **must** be set in production |
+| `RESEND_API_KEY` | No | — | Resend API key for password reset emails |
+| `APP_URL` | No | `http://localhost:5173` | Base URL used in email links |
+| `FROM_EMAIL` | No | `noreply@wordguesswho.com` | Sender address for emails |
 
 ## Deployment
 
@@ -145,3 +178,4 @@ fly volumes list        # List persistent volumes
 - In production, server serves static files from `dist/client/`
 - Player IDs stored in localStorage for reconnection support
 - Sessions expire after 20 minutes of inactivity
+- No test files exist yet — `bun test` will pass with zero tests

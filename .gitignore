@@ -31,6 +31,9 @@ npm-debug.log*
 # Test coverage
 coverage/
 
+# Claude Code local overrides
+.claude.local.md
+
 # Temporary files
 *.tmp
 *.temp
