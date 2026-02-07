@@ -280,6 +280,91 @@ describe("validateGameConfigInput", () => {
 });
 
 // ===========================================================================
+// validateGameConfig
+// ===========================================================================
+
+describe("validateGameConfig", () => {
+  /** Build a valid complete game config for testing */
+  function validConfig(overrides: Record<string, unknown> = {}) {
+    return {
+      id: "test-config",
+      name: "Test Config",
+      wordBank: Array.from({ length: 12 }, (_, i) => ({ word: `word${i}` })),
+      suggestedQuestions: [{ text: "Does it start with A?", category: "letters" }],
+      settings: {
+        gridSize: 12,
+        allowCustomQuestions: true,
+        turnTimeLimit: 0,
+        showPhoneticHints: false,
+        enableSounds: false,
+      },
+      createdAt: "2024-01-01T00:00:00.000Z",
+      updatedAt: "2024-01-01T00:00:00.000Z",
+      ...overrides,
+    };
+  }
+
+  test("accepts valid complete config", () => {
+    const result = validateGameConfig(validConfig());
+    expect(result.success).toBe(true);
+  });
+
+  test("rejects config without id", () => {
+    const config = validConfig();
+    delete (config as Record<string, unknown>).id;
+    const result = validateGameConfig(config);
+    expect(result.success).toBe(false);
+  });
+
+  test("rejects config with invalid id format", () => {
+    const result = validateGameConfig(validConfig({ id: "INVALID ID!" }));
+    expect(result.success).toBe(false);
+  });
+
+  test("rejects config without createdAt", () => {
+    const config = validConfig();
+    delete (config as Record<string, unknown>).createdAt;
+    const result = validateGameConfig(config);
+    expect(result.success).toBe(false);
+  });
+
+  test("rejects config without updatedAt", () => {
+    const config = validConfig();
+    delete (config as Record<string, unknown>).updatedAt;
+    const result = validateGameConfig(config);
+    expect(result.success).toBe(false);
+  });
+
+  test("rejects config with invalid datetime format", () => {
+    const result = validateGameConfig(validConfig({ createdAt: "not-a-date" }));
+    expect(result.success).toBe(false);
+  });
+
+  test("rejects gridSize larger than word bank", () => {
+    const result = validateGameConfig(
+      validConfig({
+        settings: {
+          gridSize: 20,
+          allowCustomQuestions: true,
+          turnTimeLimit: 0,
+          showPhoneticHints: false,
+          enableSounds: false,
+        },
+      })
+    );
+    // Word bank has 12 words but grid asks for 20
+    expect(result.success).toBe(false);
+  });
+
+  test("returns error messages for invalid input", () => {
+    const result = validateGameConfig({});
+    expect(result.success).toBe(false);
+    if (result.success) return;
+    expect(result.errors.length).toBeGreaterThan(0);
+  });
+});
+
+// ===========================================================================
 // generateIdFromName
 // ===========================================================================
 
