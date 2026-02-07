@@ -32,6 +32,9 @@ import {
 } from "./game-engine";
 import { getConfig } from "./config-manager";
 
+/** How often to send WebSocket ping frames (in ms) */
+const HEARTBEAT_INTERVAL_MS = 30_000;
+
 /** WebSocket data attached to each connection */
 export interface WebSocketData {
   gameCode: string | null;
@@ -49,6 +52,10 @@ interface GameRoom {
 /** The session manager singleton */
 class SessionManager {
   private rooms: Map<string, GameRoom> = new Map();
+  private heartbeatInterval: ReturnType<typeof setInterval> | null = null;
+  /** Tracks liveness of each socket; set to false before ping, set to true on pong */
+  private socketAlive: WeakMap<ServerWebSocket<WebSocketData>, boolean> =
+    new WeakMap();
 
   /** Create a new game session */
   async createSession(
@@ -101,6 +108,68 @@ class SessionManager {
   getSession(gameCode: string): GameSession | null {
     const room = this.rooms.get(gameCode);
     return room?.session ?? null;
+  }
+
+  // ============================================
+  // Heartbeat / Ping-Pong
+  // ============================================
+
+  /** Start the periodic heartbeat that pings all connected sockets */
+  startHeartbeat(): void {
+    if (this.heartbeatInterval) return; // already running
+
+    this.heartbeatInterval = setInterval(() => {
+      this.pingAllSockets();
+    }, HEARTBEAT_INTERVAL_MS);
+  }
+
+  /** Stop the heartbeat interval */
+  stopHeartbeat(): void {
+    if (this.heartbeatInterval) {
+      clearInterval(this.heartbeatInterval);
+      this.heartbeatInterval = null;
+    }
+  }
+
+  /** Mark a newly opened socket as alive */
+  registerSocket(ws: ServerWebSocket<WebSocketData>): void {
+    this.socketAlive.set(ws, true);
+  }
+
+  /** Called when a pong frame is received from a client */
+  handlePong(ws: ServerWebSocket<WebSocketData>): void {
+    this.socketAlive.set(ws, true);
+  }
+
+  /** Ping every connected socket; disconnect any that missed the last pong */
+  private pingAllSockets(): void {
+    for (const room of this.rooms.values()) {
+      for (const [playerId, socket] of room.sockets) {
+        const isAlive = this.socketAlive.get(socket) ?? false;
+
+        if (!isAlive) {
+          // Did not respond to previous ping — stale connection
+          console.log(
+            `Heartbeat: stale WebSocket for player ${playerId} in game ${room.session.code}, disconnecting`
+          );
+          this.handleDisconnect(socket);
+          try {
+            socket.close();
+          } catch {
+            // Socket may already be closed
+          }
+          continue;
+        }
+
+        // Mark as not-alive; will be set back to true when pong arrives
+        this.socketAlive.set(socket, false);
+        try {
+          socket.ping();
+        } catch {
+          // Socket may be closed
+        }
+      }
+    }
   }
 
   /** Handle a new WebSocket connection attempting to join a game */
@@ -199,6 +268,11 @@ class SessionManager {
     const { gameCode, playerId, playerIndex } = ws.data;
 
     if (!gameCode || !playerId) return;
+
+    // Clear connection info to prevent duplicate processing
+    // (e.g., when handleDisconnect is called explicitly before socket.close())
+    ws.data.gameCode = null;
+    ws.data.playerId = null;
 
     const room = this.rooms.get(gameCode);
     if (!room) return;
