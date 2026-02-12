@@ -29,7 +29,7 @@ export function GamePage() {
     useGameActions();
   const { addGameResult, recordedGameCodes, markGameRecorded } =
     useSessionGameLog();
-  const { student, isStudentAuthenticated } = useStudent();
+  const { student, isStudentAuthenticated, isLoading: isStudentLoading } = useStudent();
   const [hasJoined, setHasJoined] = useState(false);
 
   useEffect(() => {
@@ -44,6 +44,12 @@ export function GamePage() {
       return;
     }
 
+    // Wait for student context to finish loading before joining
+    // to ensure studentId is available if the user is authenticated
+    if (isStudentLoading) {
+      return;
+    }
+
     if (connected && !hasJoined) {
       // Avoid double-join when React Strict Mode remounts (ref survives remount)
       if (joinedGameCodeRef.current === code) {
@@ -55,7 +61,7 @@ export function GamePage() {
       joinGame(code, playerName, savedPlayerId || undefined, studentId);
       setHasJoined(true);
     }
-  }, [code, connected, hasJoined, joinGame, joinedGameCodeRef, navigate]);
+  }, [code, connected, hasJoined, joinGame, joinedGameCodeRef, navigate, isStudentLoading, isStudentAuthenticated, student]);
 
   useEffect(() => {
     if (session && code) {

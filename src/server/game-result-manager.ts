@@ -79,13 +79,3 @@ export function saveGameResult(params: {
   };
 }
 
-/** Get game results for a class */
-export function getGameResultsForClass(classId: string): GameResult[] {
-  const db = getDb();
-  const rows = db
-    .query<GameResultRow, [string]>(
-      "SELECT * FROM game_results WHERE class_id = ? ORDER BY finished_at DESC"
-    )
-    .all(classId);
-  return rows.map(rowToGameResult);
-}

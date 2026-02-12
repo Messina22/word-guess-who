@@ -32,6 +32,7 @@ import {
 } from "./game-engine";
 import { getConfig } from "./config-manager";
 import { saveGameResult } from "./game-result-manager";
+import { getStudentById } from "./student-manager";
 
 /** How often to send WebSocket ping frames (in ms) */
 const HEARTBEAT_INTERVAL_MS = 30_000;
@@ -218,12 +219,18 @@ class SessionManager {
     ws.data.playerId = player.id;
     ws.data.playerIndex = playerIndex;
 
-    // Track student ID on the session
+    // Track student ID on the session (validate it exists first)
     if (studentId) {
-      if (!room.session.playerStudentIds) {
-        room.session.playerStudentIds = [null, null];
+      const student = getStudentById(studentId);
+      if (student) {
+        // If session has a classId, only accept students from that class
+        if (!room.session.classId || student.classId === room.session.classId) {
+          if (!room.session.playerStudentIds) {
+            room.session.playerStudentIds = [null, null];
+          }
+          room.session.playerStudentIds[playerIndex] = studentId;
+        }
       }
-      room.session.playerStudentIds[playerIndex] = studentId;
     }
 
     // Track socket
