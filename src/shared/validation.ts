@@ -321,7 +321,10 @@ export const createClassInputSchema = z.object({
 
 /** Schema for student login */
 export const studentLoginInputSchema = z.object({
-  classCode: z.string().trim().min(1, "Class code is required"),
+  classCode: z.preprocess(
+    (val) => (typeof val === "string" ? val.trim().toLowerCase() : val),
+    classCodeSchema
+  ),
   username: studentUsernameSchema,
 });
 

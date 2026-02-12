@@ -21,6 +21,9 @@ export function getDb(): Database {
   // Enable WAL mode for better concurrency
   db.run("PRAGMA journal_mode = WAL");
 
+  // Enable foreign key enforcement (required per-connection in SQLite)
+  db.run("PRAGMA foreign_keys = ON");
+
   // Initialize schema
   initSchema(db);
 

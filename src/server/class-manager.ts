@@ -168,8 +168,6 @@ export function deleteClass(
   }
 
   const db = getDb();
-  // Enable foreign key enforcement for CASCADE
-  db.run("PRAGMA foreign_keys = ON");
   db.run("DELETE FROM classes WHERE id = ?", [id]);
 
   return { success: true };
