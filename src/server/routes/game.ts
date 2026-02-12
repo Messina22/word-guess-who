@@ -33,6 +33,8 @@ export async function handleCreateGame(request: Request): Promise<Response> {
       body.showOnlyLastQuestion ?? false,
       body.randomSecretWords ?? false,
       body.sharedComputerMode ?? false,
+      body.classId,
+      body.studentId,
     );
 
     if ("error" in result) {

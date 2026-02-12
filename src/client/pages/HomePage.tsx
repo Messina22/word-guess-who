@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { CreateGameForm } from "@client/components/lobby/CreateGameForm";
 import { JoinGameForm } from "@client/components/lobby/JoinGameForm";
 import { GameSessionLog } from "@client/components/lobby/GameSessionLog";
+import { StudentLoginForm } from "@client/components/student/StudentLoginForm";
 
 export function HomePage() {
   return (
@@ -24,6 +25,10 @@ export function HomePage() {
       </header>
 
       <main className="max-w-4xl mx-auto">
+        <div className="mb-6">
+          <StudentLoginForm />
+        </div>
+
         <div className="grid md:grid-cols-2 gap-6 sm:gap-8">
           <CreateGameForm />
           <div className="hidden md:flex flex-col gap-6">

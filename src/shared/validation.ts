@@ -7,6 +7,8 @@ import type {
   WordEntry,
   RegisterInput,
   LoginInput,
+  CreateClassInput,
+  StudentLoginInput,
 } from "./types";
 
 /** Valid question categories */
@@ -275,6 +277,82 @@ export function validateResetPasswordInput(data: unknown): {
   errors: string[];
 } {
   const result = resetPasswordInputSchema.safeParse(data);
+  if (result.success) {
+    return { success: true, data: result.data };
+  }
+  const errors = result.error.errors.map((e) => {
+    const path = e.path.join(".");
+    return path ? `${path}: ${e.message}` : e.message;
+  });
+  return { success: false, errors };
+}
+
+// ============================================
+// Class & Student Validation
+// ============================================
+
+/** Class name validation schema */
+export const classNameSchema = z
+  .string()
+  .trim()
+  .min(1, "Class name is required")
+  .max(100, "Class name must be 100 characters or less");
+
+/** Class join code schema (8 lowercase alphanumeric) */
+export const classCodeSchema = z
+  .string()
+  .regex(/^[a-z0-9]{8}$/, "Class code must be 8 lowercase alphanumeric characters");
+
+/** Student username schema */
+export const studentUsernameSchema = z
+  .string()
+  .trim()
+  .min(1, "Username is required")
+  .max(30, "Username must be 30 characters or less")
+  .regex(
+    /^[a-zA-Z0-9 -]+$/,
+    "Username can only contain letters, numbers, spaces, and hyphens"
+  );
+
+/** Schema for creating a class */
+export const createClassInputSchema = z.object({
+  name: classNameSchema,
+});
+
+/** Schema for student login */
+export const studentLoginInputSchema = z.object({
+  classCode: z.string().trim().min(1, "Class code is required"),
+  username: studentUsernameSchema,
+});
+
+/** Validate create class input */
+export function validateCreateClassInput(data: unknown): {
+  success: true;
+  data: CreateClassInput;
+} | {
+  success: false;
+  errors: string[];
+} {
+  const result = createClassInputSchema.safeParse(data);
+  if (result.success) {
+    return { success: true, data: result.data };
+  }
+  const errors = result.error.errors.map((e) => {
+    const path = e.path.join(".");
+    return path ? `${path}: ${e.message}` : e.message;
+  });
+  return { success: false, errors };
+}
+
+/** Validate student login input */
+export function validateStudentLoginInput(data: unknown): {
+  success: true;
+  data: StudentLoginInput;
+} | {
+  success: false;
+  errors: string[];
+} {
+  const result = studentLoginInputSchema.safeParse(data);
   if (result.success) {
     return { success: true, data: result.data };
   }

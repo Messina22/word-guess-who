@@ -31,6 +31,7 @@ import {
   SESSION_TIMEOUT_MS,
 } from "./game-engine";
 import { getConfig } from "./config-manager";
+import { saveGameResult } from "./game-result-manager";
 
 /** How often to send WebSocket ping frames (in ms) */
 const HEARTBEAT_INTERVAL_MS = 30_000;
@@ -63,7 +64,9 @@ class SessionManager {
     isLocalMode: boolean = false,
     showOnlyLastQuestion: boolean = false,
     randomSecretWords: boolean = false,
-    sharedComputerMode: boolean = false
+    sharedComputerMode: boolean = false,
+    classId?: string,
+    creatorStudentId?: string
   ): Promise<GameSession | { error: string }> {
     const config = getConfig(configId);
     if (!config) {
@@ -91,6 +94,14 @@ class SessionManager {
       sharedComputerMode
     );
     session.code = gameCode; // Use the verified unique code
+
+    // Attach class/student info for game result tracking
+    if (classId) {
+      session.classId = classId;
+    }
+    if (creatorStudentId) {
+      session.playerStudentIds = [creatorStudentId, null];
+    }
 
     const room: GameRoom = {
       session,
@@ -177,7 +188,8 @@ class SessionManager {
     ws: ServerWebSocket<WebSocketData>,
     gameCode: string,
     playerName: string,
-    existingPlayerId?: string
+    existingPlayerId?: string,
+    studentId?: string
   ): void {
     const room = this.rooms.get(gameCode);
 
@@ -205,6 +217,14 @@ class SessionManager {
     ws.data.gameCode = gameCode;
     ws.data.playerId = player.id;
     ws.data.playerIndex = playerIndex;
+
+    // Track student ID on the session
+    if (studentId) {
+      if (!room.session.playerStudentIds) {
+        room.session.playerStudentIds = [null, null];
+      }
+      room.session.playerStudentIds[playerIndex] = studentId;
+    }
 
     // Track socket
     room.sockets.set(player.id, ws);
@@ -310,7 +330,8 @@ class SessionManager {
         ws,
         message.gameCode,
         message.playerName,
-        message.playerId
+        message.playerId,
+        message.studentId
       );
       return;
     }
@@ -476,7 +497,7 @@ class SessionManager {
       correct: result.correct,
     });
 
-    // If game is over, send game over message
+    // If game is over, send game over message and persist result
     if (result.gameOver) {
       const winner = room.session.players[result.playerIndex];
       const secretWords: [string, string] = [
@@ -490,6 +511,25 @@ class SessionManager {
         winnerName: winner.name,
         secretWords,
       });
+
+      // Persist game result to database
+      try {
+        saveGameResult({
+          gameCode: room.session.code,
+          configId: room.session.configId,
+          classId: room.session.classId ?? null,
+          player1Id: room.session.playerStudentIds?.[0] ?? null,
+          player2Id: room.session.playerStudentIds?.[1] ?? null,
+          player1Name: room.session.players[0].name,
+          player2Name: room.session.players[1].name,
+          winnerIndex: result.playerIndex,
+          player1SecretWord: secretWords[0],
+          player2SecretWord: secretWords[1],
+          startedAt: room.session.createdAt,
+        });
+      } catch (error) {
+        console.error("Failed to save game result:", error);
+      }
 
       // Schedule room cleanup after game over
       this.scheduleExpiration(room.session.code, SESSION_TIMEOUT_MS);

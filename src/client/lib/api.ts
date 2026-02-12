@@ -9,10 +9,16 @@ import type {
   Instructor,
   RegisterInput,
   LoginInput,
+  StudentLoginInput,
+  StudentAuthResponse,
+  Student,
+  Class,
+  ClassWithRoster,
 } from "@shared/types";
 
 const API_BASE = "/api";
 const AUTH_TOKEN_KEY = "authToken";
+const STUDENT_TOKEN_KEY = "studentToken";
 
 /** Get the stored auth token */
 export function getAuthToken(): string | null {
@@ -27,6 +33,21 @@ export function setAuthToken(token: string): void {
 /** Clear the auth token */
 export function clearAuthToken(): void {
   localStorage.removeItem(AUTH_TOKEN_KEY);
+}
+
+/** Get the stored student auth token */
+export function getStudentAuthToken(): string | null {
+  return localStorage.getItem(STUDENT_TOKEN_KEY);
+}
+
+/** Set the student auth token */
+export function setStudentAuthToken(token: string): void {
+  localStorage.setItem(STUDENT_TOKEN_KEY, token);
+}
+
+/** Clear the student auth token */
+export function clearStudentAuthToken(): void {
+  localStorage.removeItem(STUDENT_TOKEN_KEY);
 }
 
 /** Get auth headers if token exists */
@@ -60,6 +81,12 @@ async function request<T>(
   }
 }
 
+/** Get student auth headers if token exists */
+function getStudentAuthHeaders(): Record<string, string> {
+  const token = getStudentAuthToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 export const api = {
   auth: {
     register: (input: RegisterInput) =>
@@ -91,6 +118,19 @@ export const api = {
         body: JSON.stringify({ token, password }),
         authenticated: false,
       }),
+
+    studentLogin: (input: StudentLoginInput) =>
+      request<StudentAuthResponse>("/auth/student-login", {
+        method: "POST",
+        body: JSON.stringify(input),
+        authenticated: false,
+      }),
+
+    studentMe: () =>
+      request<{ student: Student; className: string }>("/auth/student-me", {
+        authenticated: false,
+        headers: getStudentAuthHeaders(),
+      }),
   },
 
   configs: {
@@ -117,6 +157,37 @@ export const api = {
       request<null>(`/configs/${encodeURIComponent(id)}`, {
         method: "DELETE",
       }),
+  },
+
+  classes: {
+    create: (input: { name: string }) =>
+      request<Class>("/classes", {
+        method: "POST",
+        body: JSON.stringify(input),
+      }),
+
+    list: () =>
+      request<(Class & { studentCount: number })[]>("/classes"),
+
+    get: (id: string) =>
+      request<ClassWithRoster>(`/classes/${encodeURIComponent(id)}`),
+
+    update: (id: string, input: { name: string }) =>
+      request<Class>(`/classes/${encodeURIComponent(id)}`, {
+        method: "PUT",
+        body: JSON.stringify(input),
+      }),
+
+    delete: (id: string) =>
+      request<null>(`/classes/${encodeURIComponent(id)}`, {
+        method: "DELETE",
+      }),
+
+    removeStudent: (classId: string, studentId: string) =>
+      request<null>(
+        `/classes/${encodeURIComponent(classId)}/students/${encodeURIComponent(studentId)}`,
+        { method: "DELETE" }
+      ),
   },
 
   games: {

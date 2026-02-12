@@ -10,6 +10,10 @@ import type {
   QuestionCategory,
 } from "@shared/types";
 import { generateIdFromName } from "@shared/validation";
+import { ClassList } from "@client/components/classes/ClassList";
+import { ClassDetail } from "@client/components/classes/ClassDetail";
+
+type DashboardTab = "configs" | "classes";
 
 const questionCategories: QuestionCategory[] = [
   "letters",
@@ -95,6 +99,9 @@ export function InstructorPage() {
     isLoading: authLoading,
     logout,
   } = useAuth();
+
+  const [activeTab, setActiveTab] = useState<DashboardTab>("configs");
+  const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
 
   const [configs, setConfigs] = useState<GameConfig[]>([]);
   const [listLoading, setListLoading] = useState(true);
@@ -595,6 +602,59 @@ export function InstructorPage() {
         )}
       </header>
 
+      {/* Tab Navigation */}
+      {isAuthenticated && (
+        <div className="max-w-6xl mx-auto mb-6">
+          <div className="flex gap-1 border-b-2 border-kraft/30">
+            <button
+              type="button"
+              onClick={() => setActiveTab("configs")}
+              className={`px-6 py-3 font-display text-sm rounded-t-lg transition ${
+                activeTab === "configs"
+                  ? "bg-white border-2 border-b-0 border-kraft/30 text-pencil -mb-[2px]"
+                  : "text-pencil/60 hover:text-pencil"
+              }`}
+            >
+              Configurations
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("classes")}
+              className={`px-6 py-3 font-display text-sm rounded-t-lg transition ${
+                activeTab === "classes"
+                  ? "bg-white border-2 border-b-0 border-kraft/30 text-pencil -mb-[2px]"
+                  : "text-pencil/60 hover:text-pencil"
+              }`}
+            >
+              Classes
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Classes Tab */}
+      {activeTab === "classes" && isAuthenticated && (
+        <main className="max-w-6xl mx-auto grid lg:grid-cols-[1fr_2fr] gap-8">
+          <ClassList
+            selectedClassId={selectedClassId}
+            onSelectClass={setSelectedClassId}
+          />
+          <section>
+            {selectedClassId ? (
+              <ClassDetail classId={selectedClassId} />
+            ) : (
+              <div className="paper-card p-6 text-center text-pencil/60">
+                <p className="font-ui text-sm">
+                  Select a class on the left or create a new one to manage students.
+                </p>
+              </div>
+            )}
+          </section>
+        </main>
+      )}
+
+      {/* Configurations Tab */}
+      {(activeTab === "configs" || !isAuthenticated) && (
       <main className="max-w-6xl mx-auto grid lg:grid-cols-[1fr_2fr] gap-8">
         <section className="paper-card p-6">
           <div className="flex items-center justify-between mb-4">
@@ -1278,6 +1338,7 @@ export function InstructorPage() {
           )}
         </section>
       </main>
+      )}
     </div>
   );
 }

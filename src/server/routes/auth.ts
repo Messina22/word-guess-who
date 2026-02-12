@@ -107,7 +107,7 @@ export async function handleMe(request: Request): Promise<Response> {
   }
 
   const payload = await verifyToken(token);
-  if (!payload) {
+  if (!payload || payload.role !== "instructor") {
     return jsonResponse<null>(
       { success: false, error: "Invalid or expired token" },
       401

@@ -32,7 +32,7 @@ async function getInstructorFromRequest(
   if (!token) return null;
 
   const payload = await verifyToken(token);
-  if (!payload) return null;
+  if (!payload || payload.role !== "instructor") return null;
 
   return getInstructorById(payload.instructorId);
 }
