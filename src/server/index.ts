@@ -9,7 +9,14 @@ import {
   handleDeleteConfig,
 } from "./routes/api";
 import { handleCreateGame, handleGetGame } from "./routes/game";
-import { handleRegister, handleLogin, handleMe, handleForgotPassword, handleResetPassword } from "./routes/auth";
+import {
+  handleRegister,
+  handleLogin,
+  handleMe,
+  handleListInstructors,
+  handleForgotPassword,
+  handleResetPassword,
+} from "./routes/auth";
 import { handleStudentLogin, handleStudentMe } from "./routes/students";
 import {
   handleCreateClass,
@@ -174,6 +181,9 @@ async function handleRequest(
   }
   if (path === "/api/auth/me" && method === "GET") {
     return handleMe(request);
+  }
+  if (path === "/api/auth/instructors" && method === "GET") {
+    return handleListInstructors(request);
   }
   if (path === "/api/auth/forgot-password" && method === "POST") {
     return handleForgotPassword(request);

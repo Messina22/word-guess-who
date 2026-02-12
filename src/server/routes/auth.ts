@@ -10,6 +10,7 @@ import {
   authenticateInstructor,
   getInstructorById,
   getInstructorByEmail,
+  listInstructors,
   createPasswordResetToken,
   verifyResetToken,
   consumeResetToken,
@@ -123,6 +124,36 @@ export async function handleMe(request: Request): Promise<Response> {
   }
 
   return jsonResponse<Instructor>({ success: true, data: instructor });
+}
+
+/** GET /api/auth/instructors - List instructor accounts (development only) */
+export async function handleListInstructors(
+  request: Request
+): Promise<Response> {
+  if (process.env.NODE_ENV === "production") {
+    return jsonResponse<null>({ success: false, error: "Not found" }, 404);
+  }
+
+  const authHeader = request.headers.get("Authorization");
+  const token = extractTokenFromHeader(authHeader);
+
+  if (!token) {
+    return jsonResponse<null>(
+      { success: false, error: "Authentication required" },
+      401
+    );
+  }
+
+  const payload = await verifyToken(token);
+  if (!payload || payload.role !== "instructor") {
+    return jsonResponse<null>(
+      { success: false, error: "Invalid or expired token" },
+      401
+    );
+  }
+
+  const instructors = listInstructors();
+  return jsonResponse<Instructor[]>({ success: true, data: instructors });
 }
 
 // ============================================

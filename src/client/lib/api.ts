@@ -105,6 +105,8 @@ export const api = {
 
     me: () => request<Instructor>("/auth/me"),
 
+    listInstructors: () => request<Instructor[]>("/auth/instructors"),
+
     forgotPassword: (email: string) =>
       request<{ message: string }>("/auth/forgot-password", {
         method: "POST",
