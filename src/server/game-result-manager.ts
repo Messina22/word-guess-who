@@ -2,6 +2,14 @@ import { nanoid } from "nanoid";
 import { getDb } from "./db";
 import type { GameResult } from "@shared/types";
 
+/** Check if a student exists in the database */
+function studentExists(db: ReturnType<typeof getDb>, studentId: string): boolean {
+  const result = db
+    .query<{ id: string }, [string]>("SELECT id FROM students WHERE id = ?")
+    .get(studentId);
+  return result !== null;
+}
+
 /** Save a game result when a game finishes */
 export function saveGameResult(params: {
   gameCode: string;
@@ -20,6 +28,15 @@ export function saveGameResult(params: {
   const id = nanoid();
   const now = new Date().toISOString();
 
+  // Validate student IDs exist to avoid FK constraint violations
+  // (student may have been deleted while game was in progress)
+  const player1Id = params.player1Id && studentExists(db, params.player1Id)
+    ? params.player1Id
+    : null;
+  const player2Id = params.player2Id && studentExists(db, params.player2Id)
+    ? params.player2Id
+    : null;
+
   db.run(
     `INSERT INTO game_results (
       id, game_code, config_id, class_id,
@@ -32,8 +49,8 @@ export function saveGameResult(params: {
       params.gameCode,
       params.configId,
       params.classId ?? null,
-      params.player1Id ?? null,
-      params.player2Id ?? null,
+      player1Id,
+      player2Id,
       params.player1Name,
       params.player2Name,
       params.winnerIndex,
@@ -49,8 +66,8 @@ export function saveGameResult(params: {
     gameCode: params.gameCode,
     configId: params.configId,
     classId: params.classId ?? null,
-    player1Id: params.player1Id ?? null,
-    player2Id: params.player2Id ?? null,
+    player1Id,
+    player2Id,
     player1Name: params.player1Name,
     player2Name: params.player2Name,
     winnerIndex: params.winnerIndex,
