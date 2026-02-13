@@ -9,6 +9,7 @@ import {
 } from "../config-manager";
 import { extractTokenFromHeader, verifyToken } from "../auth";
 import { getInstructorById } from "../instructor-manager";
+import { getClassById } from "../class-manager";
 import { jsonResponse } from "../utils/response";
 
 /** Handle OPTIONS preflight requests */
@@ -37,14 +38,21 @@ async function getInstructorFromRequest(
   return getInstructorById(payload.instructorId);
 }
 
-/** GET /api/configs - List public configurations and system templates */
+/** GET /api/configs - List configurations based on auth state and optional classId */
 export async function handleListConfigs(request: Request): Promise<Response> {
+  const url = new URL(request.url);
+  const classId = url.searchParams.get("classId");
   const instructor = await getInstructorFromRequest(request);
 
-  // If authenticated, include instructor's own configs too
-  const configs = instructor
-    ? listConfigs(instructor.id)
-    : listPublicConfigs();
+  let configs: GameConfig[];
+  if (instructor) {
+    configs = listConfigs(instructor.id);
+  } else if (classId) {
+    const cls = getClassById(classId);
+    configs = cls ? listConfigs(cls.instructorId) : listPublicConfigs();
+  } else {
+    configs = listPublicConfigs();
+  }
 
   return jsonResponse<GameConfig[]>({ success: true, data: configs });
 }
