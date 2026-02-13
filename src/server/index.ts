@@ -9,7 +9,23 @@ import {
   handleDeleteConfig,
 } from "./routes/api";
 import { handleCreateGame, handleGetGame } from "./routes/game";
-import { handleRegister, handleLogin, handleMe, handleForgotPassword, handleResetPassword } from "./routes/auth";
+import {
+  handleRegister,
+  handleLogin,
+  handleMe,
+  handleListInstructors,
+  handleForgotPassword,
+  handleResetPassword,
+} from "./routes/auth";
+import { handleStudentLogin, handleStudentMe } from "./routes/students";
+import {
+  handleCreateClass,
+  handleListClasses,
+  handleGetClass,
+  handleUpdateClass,
+  handleDeleteClass,
+  handleRemoveStudent,
+} from "./routes/classes";
 import { sessionManager, type WebSocketData } from "./session-manager";
 import type { ClientMessage } from "@shared/types";
 import { join } from "path";
@@ -166,11 +182,57 @@ async function handleRequest(
   if (path === "/api/auth/me" && method === "GET") {
     return handleMe(request);
   }
+  if (path === "/api/auth/instructors" && method === "GET") {
+    return handleListInstructors(request);
+  }
   if (path === "/api/auth/forgot-password" && method === "POST") {
     return handleForgotPassword(request);
   }
   if (path === "/api/auth/reset-password" && method === "POST") {
     return handleResetPassword(request);
+  }
+
+  // Student auth routes
+  if (path === "/api/auth/student-login" && method === "POST") {
+    return handleStudentLogin(request);
+  }
+  if (path === "/api/auth/student-me" && method === "GET") {
+    return handleStudentMe(request);
+  }
+
+  // Class API routes
+  if (path === "/api/classes") {
+    if (method === "GET") {
+      return handleListClasses(request);
+    }
+    if (method === "POST") {
+      return handleCreateClass(request);
+    }
+  }
+
+  // Class API routes with ID parameter
+  const classMatch = path.match(/^\/api\/classes\/([^/]+)$/);
+  if (classMatch) {
+    const id = decodeURIComponent(classMatch[1]);
+    if (method === "GET") {
+      return handleGetClass(request, id);
+    }
+    if (method === "PUT") {
+      return handleUpdateClass(request, id);
+    }
+    if (method === "DELETE") {
+      return handleDeleteClass(request, id);
+    }
+  }
+
+  // Class student removal route
+  const classStudentMatch = path.match(
+    /^\/api\/classes\/([^/]+)\/students\/([^/]+)$/
+  );
+  if (classStudentMatch && method === "DELETE") {
+    const classId = decodeURIComponent(classStudentMatch[1]);
+    const studentId = decodeURIComponent(classStudentMatch[2]);
+    return handleRemoveStudent(request, classId, studentId);
   }
 
   // Config API routes

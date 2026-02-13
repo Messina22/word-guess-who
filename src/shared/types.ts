@@ -125,6 +125,107 @@ export interface LoginInput {
 }
 
 // ============================================
+// Class & Student Types
+// ============================================
+
+/** A teacher-created class/group */
+export interface Class {
+  id: string;
+  name: string;
+  joinCode: string;
+  instructorId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Database row representation of a class */
+export interface ClassRow {
+  id: string;
+  name: string;
+  join_code: string;
+  instructor_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
+/** A student belonging to a class */
+export interface Student {
+  id: string;
+  username: string;
+  classId: string;
+  lastSeenAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Database row representation of a student */
+export interface StudentRow {
+  id: string;
+  username: string;
+  class_id: string;
+  last_seen_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/** Input for creating a new class */
+export interface CreateClassInput {
+  name: string;
+}
+
+/** Input for student login (class code + username) */
+export interface StudentLoginInput {
+  classCode: string;
+  username: string;
+}
+
+/** Response for student login */
+export interface StudentAuthResponse {
+  student: Student;
+  className: string;
+  token: string;
+}
+
+/** A class with its student roster */
+export interface ClassWithRoster extends Class {
+  students: Student[];
+}
+
+/** A persisted game result */
+export interface GameResult {
+  id: string;
+  gameCode: string;
+  configId: string;
+  classId: string | null;
+  player1Id: string | null;
+  player2Id: string | null;
+  player1Name: string;
+  player2Name: string;
+  winnerIndex: number;
+  player1SecretWord: string;
+  player2SecretWord: string;
+  startedAt: string;
+  finishedAt: string;
+}
+
+/** Database row representation of a game result */
+export interface GameResultRow {
+  id: string;
+  game_code: string;
+  config_id: string;
+  class_id: string | null;
+  player1_id: string | null;
+  player2_id: string | null;
+  player1_name: string;
+  player2_name: string;
+  winner_index: number;
+  player1_secret_word: string;
+  player2_secret_word: string;
+  started_at: string;
+  finished_at: string;
+}
+
+// ============================================
 // Game Session Types (Phase 2)
 // ============================================
 
@@ -189,6 +290,10 @@ export interface GameSession {
   createdAt: string;
   /** When the session expires */
   expiresAt: string;
+  /** Optional class ID if game was created by a student in a class */
+  classId?: string;
+  /** Student IDs for player 0 and player 1 (null if anonymous) */
+  playerStudentIds?: [string | null, string | null];
 }
 
 /** Public game session info (excludes secret words) */
@@ -253,6 +358,8 @@ export interface JoinGameMessage extends ClientMessageBase {
   playerName: string;
   /** Optional: reconnect with existing player ID */
   playerId?: string;
+  /** Optional: student ID if logged in as a student */
+  studentId?: string;
 }
 
 /** Flip a card on the player's board */
@@ -469,6 +576,10 @@ export interface CreateGameInput {
   randomSecretWords?: boolean;
   /** Both players share one computer and must pass it between turns */
   sharedComputerMode?: boolean;
+  /** Optional class ID to link game to a class */
+  classId?: string;
+  /** Optional student ID of the game creator */
+  studentId?: string;
 }
 
 /** Response when creating a game */

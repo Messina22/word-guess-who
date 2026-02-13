@@ -4,6 +4,8 @@
 
 import type { ApiResponse, CreateGameInput, CreateGameResponse, PublicGameSession } from "@shared/types";
 import { sessionManager } from "../session-manager";
+import { getClassById } from "../class-manager";
+import { getStudentById } from "../student-manager";
 
 /** Helper to create JSON responses */
 function jsonResponse<T>(data: ApiResponse<T>, status: number = 200): Response {
@@ -27,12 +29,42 @@ export async function handleCreateGame(request: Request): Promise<Response> {
       return jsonResponse({ success: false, error: "configId is required" }, 400);
     }
 
+    // Validate classId and studentId if provided
+    let validatedClassId: string | undefined;
+    let validatedStudentId: string | undefined;
+
+    if (body.classId) {
+      const cls = getClassById(body.classId);
+      if (!cls) {
+        return jsonResponse({ success: false, error: "Invalid classId" }, 400);
+      }
+      validatedClassId = cls.id;
+    }
+
+    if (body.studentId) {
+      const student = getStudentById(body.studentId);
+      if (!student) {
+        return jsonResponse({ success: false, error: "Invalid studentId" }, 400);
+      }
+      // If classId is provided, ensure the student belongs to that class
+      if (validatedClassId && student.classId !== validatedClassId) {
+        return jsonResponse({ success: false, error: "Student does not belong to the specified class" }, 400);
+      }
+      validatedStudentId = student.id;
+      // If student is valid but classId wasn't provided, use the student's classId
+      if (!validatedClassId) {
+        validatedClassId = student.classId;
+      }
+    }
+
     const result = await sessionManager.createSession(
       body.configId,
       body.isLocalMode ?? false,
       body.showOnlyLastQuestion ?? false,
       body.randomSecretWords ?? false,
       body.sharedComputerMode ?? false,
+      validatedClassId,
+      validatedStudentId,
     );
 
     if ("error" in result) {

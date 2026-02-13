@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useGameState } from "@client/hooks/useGameState";
 import { useGameActions } from "@client/hooks/useGameActions";
 import { useSessionGameLog } from "@client/context/SessionGameLogContext";
+import { useStudent } from "@client/context/StudentContext";
 import { GameBoard } from "@client/components/game/GameBoard";
 import { QuestionPanel } from "@client/components/game/QuestionPanel";
 import { QuestionLog } from "@client/components/game/QuestionLog";
@@ -28,6 +29,7 @@ export function GamePage() {
     useGameActions();
   const { addGameResult, recordedGameCodes, markGameRecorded } =
     useSessionGameLog();
+  const { student, isStudentAuthenticated, isLoading: isStudentLoading } = useStudent();
   const [hasJoined, setHasJoined] = useState(false);
 
   useEffect(() => {
@@ -42,6 +44,12 @@ export function GamePage() {
       return;
     }
 
+    // Wait for student context to finish loading before joining
+    // to ensure studentId is available if the user is authenticated
+    if (isStudentLoading) {
+      return;
+    }
+
     if (connected && !hasJoined) {
       // Avoid double-join when React Strict Mode remounts (ref survives remount)
       if (joinedGameCodeRef.current === code) {
@@ -49,10 +57,11 @@ export function GamePage() {
         return;
       }
       const savedPlayerId = localStorage.getItem(`playerId_${code}`);
-      joinGame(code, playerName, savedPlayerId || undefined);
+      const studentId = isStudentAuthenticated && student ? student.id : undefined;
+      joinGame(code, playerName, savedPlayerId || undefined, studentId);
       setHasJoined(true);
     }
-  }, [code, connected, hasJoined, joinGame, joinedGameCodeRef, navigate]);
+  }, [code, connected, hasJoined, joinGame, joinedGameCodeRef, navigate, isStudentLoading, isStudentAuthenticated, student]);
 
   useEffect(() => {
     if (session && code) {

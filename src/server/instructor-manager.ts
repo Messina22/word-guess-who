@@ -138,6 +138,20 @@ export function getInstructorByEmail(email: string): Instructor | null {
   return row ? rowToInstructor(row) : null;
 }
 
+/** List all instructors (for local development tooling) */
+export function listInstructors(): Instructor[] {
+  const db = getDb();
+  const rows = db
+    .query<InstructorRow, []>(
+      `SELECT id, email, password_hash, name, created_at, updated_at
+       FROM instructors
+       ORDER BY datetime(created_at) ASC`
+    )
+    .all();
+
+  return rows.map(rowToInstructor);
+}
+
 /** Hash a token with SHA-256 */
 function hashToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");

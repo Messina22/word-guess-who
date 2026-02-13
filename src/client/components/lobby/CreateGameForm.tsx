@@ -1,12 +1,14 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "@client/lib/api";
+import { useStudent } from "@client/context/StudentContext";
 import type { GameConfig } from "@shared/types";
 
 type GameMode = "online" | "local" | "shared";
 
 export function CreateGameForm() {
   const navigate = useNavigate();
+  const { student, isStudentAuthenticated } = useStudent();
   const [configCode, setConfigCode] = useState("");
   const [configLookup, setConfigLookup] = useState<{
     loading: boolean;
@@ -87,6 +89,9 @@ export function CreateGameForm() {
         : showOnlyLastQuestion,
       randomSecretWords,
       sharedComputerMode,
+      ...(isStudentAuthenticated && student
+        ? { classId: student.classId, studentId: student.id }
+        : {}),
     });
 
     if (response.success && response.data) {
