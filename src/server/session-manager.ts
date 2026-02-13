@@ -65,7 +65,7 @@ class SessionManager {
     randomSecretWords: boolean = false,
     sharedComputerMode: boolean = false,
     classId?: string,
-    creatorStudentId?: string
+    _creatorStudentId?: string
   ): Promise<GameSession | { error: string }> {
     const config = getConfig(configId);
     if (!config) {
@@ -94,12 +94,10 @@ class SessionManager {
     );
     session.code = gameCode; // Use the verified unique code
 
-    // Attach class/student info for game result tracking
+    // Attach class info for game result tracking
+    // (student IDs are assigned in handleJoin based on actual player index)
     if (classId) {
       session.classId = classId;
-    }
-    if (creatorStudentId) {
-      session.playerStudentIds = [creatorStudentId, null];
     }
 
     const room: GameRoom = {

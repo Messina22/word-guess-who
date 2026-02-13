@@ -10,6 +10,14 @@ function studentExists(db: ReturnType<typeof getDb>, studentId: string): boolean
   return result !== null;
 }
 
+/** Check if a class exists in the database */
+function classExists(db: ReturnType<typeof getDb>, classId: string): boolean {
+  const result = db
+    .query<{ id: string }, [string]>("SELECT id FROM classes WHERE id = ?")
+    .get(classId);
+  return result !== null;
+}
+
 /** Save a game result when a game finishes */
 export function saveGameResult(params: {
   gameCode: string;
@@ -28,8 +36,11 @@ export function saveGameResult(params: {
   const id = nanoid();
   const now = new Date().toISOString();
 
-  // Validate student IDs exist to avoid FK constraint violations
-  // (student may have been deleted while game was in progress)
+  // Validate class/student IDs exist to avoid FK constraint violations
+  // (class or student may have been deleted while game was in progress)
+  const classId = params.classId && classExists(db, params.classId)
+    ? params.classId
+    : null;
   const player1Id = params.player1Id && studentExists(db, params.player1Id)
     ? params.player1Id
     : null;
@@ -48,7 +59,7 @@ export function saveGameResult(params: {
       id,
       params.gameCode,
       params.configId,
-      params.classId ?? null,
+      classId,
       player1Id,
       player2Id,
       params.player1Name,
@@ -65,7 +76,7 @@ export function saveGameResult(params: {
     id,
     gameCode: params.gameCode,
     configId: params.configId,
-    classId: params.classId ?? null,
+    classId,
     player1Id,
     player2Id,
     player1Name: params.player1Name,
