@@ -19,7 +19,7 @@ export function HomePage() {
             to="/instructor"
             className="btn-secondary inline-block text-sm py-2 px-4"
           >
-            Create your own word bank
+            Instructor Dashboard
           </Link>
         </div>
       </header>
