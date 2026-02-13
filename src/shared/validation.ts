@@ -2,9 +2,6 @@ import { z } from "zod";
 import type {
   GameConfig,
   GameConfigInput,
-  GameSettings,
-  Question,
-  WordEntry,
   RegisterInput,
   LoginInput,
   CreateClassInput,

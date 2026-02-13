@@ -1,24 +1,6 @@
 import { nanoid } from "nanoid";
 import { getDb } from "./db";
-import type { GameResult, GameResultRow } from "@shared/types";
-
-function rowToGameResult(row: GameResultRow): GameResult {
-  return {
-    id: row.id,
-    gameCode: row.game_code,
-    configId: row.config_id,
-    classId: row.class_id,
-    player1Id: row.player1_id,
-    player2Id: row.player2_id,
-    player1Name: row.player1_name,
-    player2Name: row.player2_name,
-    winnerIndex: row.winner_index,
-    player1SecretWord: row.player1_secret_word,
-    player2SecretWord: row.player2_secret_word,
-    startedAt: row.started_at,
-    finishedAt: row.finished_at,
-  };
-}
+import type { GameResult } from "@shared/types";
 
 /** Save a game result when a game finishes */
 export function saveGameResult(params: {

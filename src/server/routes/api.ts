@@ -1,4 +1,4 @@
-import type { GameConfig, Instructor } from "@shared/types";
+import type { GameConfig, GameConfigInput, Instructor } from "@shared/types";
 import {
   listConfigs,
   listPublicConfigs,
@@ -81,7 +81,7 @@ export async function handleCreateConfig(request: Request): Promise<Response> {
     );
   }
 
-  const result = createConfig(body as any, instructor.id);
+  const result = createConfig(body as GameConfigInput, instructor.id);
   if (!result.success) {
     return jsonResponse<null>(
       { success: false, errors: result.errors },
@@ -138,7 +138,7 @@ export async function handleUpdateConfig(
     );
   }
 
-  const result = updateConfig(id, body as any, instructor.id);
+  const result = updateConfig(id, body as GameConfigInput, instructor.id);
   if (!result.success) {
     const is404 = result.errors.some((e) => e.includes("not found"));
     return jsonResponse<null>(

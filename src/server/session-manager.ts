@@ -9,8 +9,6 @@ import type {
   ClientMessage,
   ServerMessage,
   GameStateMessage,
-  CardState,
-  GameConfig,
 } from "@shared/types";
 import {
   createGameSession,

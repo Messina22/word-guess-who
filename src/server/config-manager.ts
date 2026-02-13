@@ -287,7 +287,7 @@ export async function loadConfigsFromFiles(): Promise<void> {
         console.error(`Error loading ${file}:`, err);
       }
     }
-  } catch (err) {
+  } catch {
     // configs directory might not exist yet
     console.log("No configs directory found, skipping file loading");
   }
