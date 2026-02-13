@@ -1,29 +1,36 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "@client/lib/api";
 import { useStudent } from "@client/context/StudentContext";
+import { useAuth } from "@client/context/AuthContext";
 import type { GameConfig } from "@shared/types";
 
 type GameMode = "online" | "local" | "shared";
 
+const GRADE_ORDER = [
+  "grade-prek",
+  "grade-k",
+  "grade-1",
+  "grade-2",
+  "grade-3",
+  "grade-4",
+  "grade-5",
+  "default",
+];
+
 export function CreateGameForm() {
   const navigate = useNavigate();
   const { student, isStudentAuthenticated } = useStudent();
-  const [configCode, setConfigCode] = useState("");
-  const [configLookup, setConfigLookup] = useState<{
-    loading: boolean;
-    config: GameConfig | null;
-    error: string | null;
-  }>({ loading: false, config: null, error: null });
+  const { isAuthenticated: isInstructorAuthenticated } = useAuth();
+  const [configs, setConfigs] = useState<GameConfig[]>([]);
+  const [selectedConfigId, setSelectedConfigId] = useState("");
+  const [configsLoading, setConfigsLoading] = useState(true);
   const [playerName, setPlayerName] = useState("");
   const [gameMode, setGameMode] = useState<GameMode>("shared");
   const [showOnlyLastQuestion, setShowOnlyLastQuestion] = useState(false);
   const [randomSecretWords, setRandomSecretWords] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // Track request freshness to ignore stale responses
-  const requestIdRef = useRef(0);
 
   // Derive API flags from gameMode
   const isLocalMode = gameMode === "local";
@@ -32,40 +39,28 @@ export function CreateGameForm() {
   // Show Only Last Question is disabled for local game modes
   const showOnlyLastQuestionDisabled = gameMode !== "online";
 
-  // Debounced config lookup - uses "default" if code is empty
-  const lookupConfig = useCallback(async (code: string) => {
-    const codeToLookup = code.trim().toLowerCase() || "default";
-
-    // Increment request ID and capture it for this request
-    const currentRequestId = ++requestIdRef.current;
-
-    setConfigLookup({ loading: true, config: null, error: null });
-
-    const response = await api.configs.get(codeToLookup);
-
-    // Ignore stale responses
-    if (currentRequestId !== requestIdRef.current) {
-      return;
-    }
-
-    if (response.success && response.data) {
-      setConfigLookup({ loading: false, config: response.data, error: null });
-    } else {
-      setConfigLookup({
-        loading: false,
-        config: null,
-        error: response.error || "Config not found",
-      });
-    }
-  }, []);
-
+  // Fetch configs on mount (passing classId if student is authenticated)
   useEffect(() => {
-    const timer = setTimeout(() => {
-      lookupConfig(configCode);
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [configCode, lookupConfig]);
+    let cancelled = false;
+    async function fetchConfigs() {
+      setConfigsLoading(true);
+      const classId =
+        isStudentAuthenticated && student ? student.classId : undefined;
+      const response = await api.configs.list(classId);
+      if (cancelled) return;
+      if (response.success && response.data) {
+        setConfigs(response.data);
+        // Default to first grade-level config
+        const defaultConfig = response.data.find((c) => c.id === "grade-prek");
+        setSelectedConfigId(defaultConfig?.id ?? response.data[0]?.id ?? "");
+      }
+      setConfigsLoading(false);
+    }
+    fetchConfigs();
+    return () => {
+      cancelled = true;
+    };
+  }, [isStudentAuthenticated, student]);
 
   // Reset showOnlyLastQuestion when switching to a local mode
   useEffect(() => {
@@ -74,15 +69,27 @@ export function CreateGameForm() {
     }
   }, [gameMode, showOnlyLastQuestionDisabled, showOnlyLastQuestion]);
 
+  const gradeConfigs = configs
+    .filter((c) => c.isSystemTemplate)
+    .sort(
+      (a, b) =>
+        (GRADE_ORDER.indexOf(a.id) === -1 ? 999 : GRADE_ORDER.indexOf(a.id)) -
+        (GRADE_ORDER.indexOf(b.id) === -1 ? 999 : GRADE_ORDER.indexOf(b.id))
+    );
+
+  const customConfigs = configs.filter((c) => !c.isSystemTemplate);
+
+  const selectedConfig = configs.find((c) => c.id === selectedConfigId);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!configLookup.config || !playerName.trim()) return;
+    if (!selectedConfigId || !playerName.trim()) return;
 
     setLoading(true);
     setError(null);
 
     const response = await api.games.create({
-      configId: configLookup.config.id,
+      configId: selectedConfigId,
       isLocalMode,
       showOnlyLastQuestion: showOnlyLastQuestionDisabled
         ? false
@@ -129,41 +136,59 @@ export function CreateGameForm() {
 
       <div className="mb-4">
         <label
-          htmlFor="configCode"
+          htmlFor="wordList"
           className="block font-ui text-sm text-pencil/70 mb-1"
         >
-          Config Code
+          Word List
         </label>
-        <input
-          id="configCode"
-          type="text"
-          value={configCode}
-          onChange={(e) => setConfigCode(e.target.value)}
-          placeholder="Leave blank for default"
-          className="input-field"
-        />
-        <p className="text-xs text-pencil/60 mt-1">
-          Leave blank to use the built-in word set, or enter a code from your
-          instructor.
-        </p>
-
-        {configLookup.loading && (
-          <p className="text-xs text-pencil/60 mt-2">Looking up config...</p>
+        {configsLoading ? (
+          <p className="text-xs text-pencil/60 mt-2">Loading word lists...</p>
+        ) : (
+          <select
+            id="wordList"
+            value={selectedConfigId}
+            onChange={(e) => setSelectedConfigId(e.target.value)}
+            className="input-field"
+          >
+            <optgroup label="Grade Level Word Lists">
+              {gradeConfigs.map((config) => (
+                <option key={config.id} value={config.id}>
+                  {config.name}
+                </option>
+              ))}
+            </optgroup>
+            {customConfigs.length > 0 && (
+              <optgroup
+                label={
+                  isInstructorAuthenticated
+                    ? "My Configs"
+                    : isStudentAuthenticated
+                      ? "Class Word Lists"
+                      : "Custom Word Lists"
+                }
+              >
+                {customConfigs.map((config) => (
+                  <option key={config.id} value={config.id}>
+                    {config.name}
+                  </option>
+                ))}
+              </optgroup>
+            )}
+          </select>
         )}
 
-        {configLookup.config && (
+        {selectedConfig && (
           <div className="mt-2 p-3 bg-grass/10 text-grass rounded-lg text-sm">
-            <p className="font-medium">{configLookup.config.name}</p>
+            <p className="font-medium">{selectedConfig.name}</p>
             <p className="text-xs opacity-80">
-              {configLookup.config.wordBank.length} words |{" "}
-              {configLookup.config.suggestedQuestions.length} questions
+              {selectedConfig.wordBank.length} words |{" "}
+              {selectedConfig.suggestedQuestions.length} questions
             </p>
-          </div>
-        )}
-
-        {configLookup.error && !configLookup.loading && (
-          <div className="mt-2 p-3 bg-paper-red/10 text-paper-red rounded-lg text-sm">
-            {configLookup.error}
+            {selectedConfig.description && (
+              <p className="text-xs opacity-70 mt-1">
+                {selectedConfig.description}
+              </p>
+            )}
           </div>
         )}
       </div>
@@ -293,7 +318,7 @@ export function CreateGameForm() {
 
       <button
         type="submit"
-        disabled={loading || !configLookup.config || !playerName.trim()}
+        disabled={loading || !selectedConfigId || !playerName.trim()}
         className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {loading ? "Creating..." : "Create Game"}

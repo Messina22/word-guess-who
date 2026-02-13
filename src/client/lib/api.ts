@@ -136,7 +136,10 @@ export const api = {
   },
 
   configs: {
-    list: () => request<GameConfig[]>("/configs"),
+    list: (classId?: string) => {
+      const params = classId ? `?classId=${encodeURIComponent(classId)}` : "";
+      return request<GameConfig[]>(`/configs${params}`);
+    },
 
     get: (id: string) =>
       request<GameConfig>(`/configs/${encodeURIComponent(id)}`, {
