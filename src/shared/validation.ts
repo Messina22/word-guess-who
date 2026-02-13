@@ -295,10 +295,13 @@ export const classNameSchema = z
   .min(1, "Class name is required")
   .max(100, "Class name must be 100 characters or less");
 
-/** Class join code schema (8 lowercase alphanumeric) */
+/** Class join code schema (8 characters from confusable-free alphabet) */
 export const classCodeSchema = z
   .string()
-  .regex(/^[a-z0-9]{8}$/, "Class code must be 8 lowercase alphanumeric characters");
+  .regex(
+    /^[abcdefghjkmnpqrstuvwxyz23456789]{8}$/,
+    "Class code must be 8 characters using only letters a-h, j-n, p-z and numbers 2-9"
+  );
 
 /** Student username schema */
 export const studentUsernameSchema = z
