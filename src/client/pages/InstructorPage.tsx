@@ -573,6 +573,30 @@ export function InstructorPage() {
           </div>
           <div className="flex gap-3">
             {isAuthenticated ? (
+              <Link
+                to="/instructor/profile"
+                className="btn-secondary inline-flex items-center justify-center w-10 h-10 p-0"
+                aria-label="Instructor profile"
+                title="Instructor profile"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  aria-hidden="true"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M20 21a8 8 0 10-16 0"
+                  />
+                  <circle cx="12" cy="8" r="4" />
+                </svg>
+              </Link>
+            ) : null}
+            {isAuthenticated ? (
               <button
                 type="button"
                 onClick={logout}

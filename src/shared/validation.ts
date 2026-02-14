@@ -4,6 +4,7 @@ import type {
   GameConfigInput,
   RegisterInput,
   LoginInput,
+  ChangePasswordInput,
   CreateClassInput,
   StudentLoginInput,
 } from "./types";
@@ -274,6 +275,31 @@ export function validateResetPasswordInput(data: unknown): {
   errors: string[];
 } {
   const result = resetPasswordInputSchema.safeParse(data);
+  if (result.success) {
+    return { success: true, data: result.data };
+  }
+  const errors = result.error.errors.map((e) => {
+    const path = e.path.join(".");
+    return path ? `${path}: ${e.message}` : e.message;
+  });
+  return { success: false, errors };
+}
+
+/** Schema for authenticated change password input */
+export const changePasswordInputSchema = z.object({
+  currentPassword: z.string().min(1, "Current password is required"),
+  newPassword: passwordSchema,
+});
+
+/** Validate authenticated change password input */
+export function validateChangePasswordInput(data: unknown): {
+  success: true;
+  data: ChangePasswordInput;
+} | {
+  success: false;
+  errors: string[];
+} {
+  const result = changePasswordInputSchema.safeParse(data);
   if (result.success) {
     return { success: true, data: result.data };
   }
