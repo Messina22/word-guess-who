@@ -367,7 +367,21 @@ export async function handleChangePassword(request: Request): Promise<Response> 
     }
 
     const newPasswordHash = await hashPassword(newPassword);
-    updateInstructorPassword(payload.instructorId, newPasswordHash);
+    // Atomic update: only succeeds if the current password hash hasn't changed
+    // since we verified it. This prevents race conditions with concurrent requests.
+    const updated = updateInstructorPassword(
+      payload.instructorId,
+      newPasswordHash,
+      passwordHash
+    );
+
+    if (!updated) {
+      // The password was changed by another request after we verified it
+      return jsonResponse<null>(
+        { success: false, error: "Password was changed by another request. Please try again." },
+        409
+      );
+    }
 
     return jsonResponse<{ message: string }>({
       success: true,

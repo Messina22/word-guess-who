@@ -26,37 +26,39 @@ export function InstructorProfilePage() {
   const [formMessage, setFormMessage] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
-  const trimmedCurrentPassword = currentPassword.trim();
-  const trimmedNewPassword = newPassword.trim();
-  const trimmedConfirmPassword = confirmPassword.trim();
+  // Check if any field has content (for showing validation messages as user types)
+  const hasAnyInput = currentPassword || newPassword || confirmPassword;
 
   const validationError = useMemo(() => {
-    if (
-      !trimmedCurrentPassword &&
-      !trimmedNewPassword &&
-      !trimmedConfirmPassword
-    ) {
+    // Only show validation errors if user has started typing
+    if (!hasAnyInput) {
       return null;
     }
-    if (!trimmedCurrentPassword || !trimmedNewPassword || !trimmedConfirmPassword) {
+    if (!currentPassword || !newPassword || !confirmPassword) {
       return "All password fields are required.";
     }
-    if (trimmedNewPassword.length < 8) {
+    if (newPassword.length < 8) {
       return "New password must be at least 8 characters.";
     }
-    if (trimmedNewPassword !== trimmedConfirmPassword) {
+    if (newPassword !== confirmPassword) {
       return "New password and confirmation must match.";
     }
-    if (trimmedCurrentPassword === trimmedNewPassword) {
+    if (currentPassword === newPassword) {
       return "New password must be different from current password.";
     }
     return null;
-  }, [trimmedConfirmPassword, trimmedCurrentPassword, trimmedNewPassword]);
+  }, [confirmPassword, currentPassword, newPassword, hasAnyInput]);
 
   async function handleChangePassword(event: FormEvent) {
     event.preventDefault();
     setFormError(null);
     setFormMessage(null);
+
+    // Require all fields to be filled
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setFormError("All password fields are required.");
+      return;
+    }
 
     if (validationError) {
       setFormError(validationError);
@@ -65,8 +67,8 @@ export function InstructorProfilePage() {
 
     setIsSaving(true);
     const response = await api.auth.changePassword({
-      currentPassword: trimmedCurrentPassword,
-      newPassword: trimmedNewPassword,
+      currentPassword,
+      newPassword,
     });
 
     if (response.success && response.data) {
