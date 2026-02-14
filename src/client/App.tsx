@@ -7,6 +7,7 @@ import { HomePage } from "@client/pages/HomePage";
 import { GamePage } from "@client/pages/GamePage";
 import { InstructorPage } from "@client/pages/InstructorPage";
 import { ResetPasswordPage } from "@client/pages/ResetPasswordPage";
+import { InstructorProfilePage } from "@client/pages/InstructorProfilePage";
 
 export function App() {
   return (
@@ -18,6 +19,10 @@ export function App() {
             <Routes>
               <Route path="/" element={<HomePage />} />
               <Route path="/instructor" element={<InstructorPage />} />
+              <Route
+                path="/instructor/profile"
+                element={<InstructorProfilePage />}
+              />
               <Route path="/reset-password" element={<ResetPasswordPage />} />
               <Route path="/game/:code" element={<GamePage />} />
             </Routes>

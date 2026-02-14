@@ -1,26 +1,70 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { CreateGameForm } from "@client/components/lobby/CreateGameForm";
 import { JoinGameForm } from "@client/components/lobby/JoinGameForm";
 import { GameSessionLog } from "@client/components/lobby/GameSessionLog";
 import { StudentLoginForm } from "@client/components/student/StudentLoginForm";
+import { AuthModal } from "@client/components/auth/AuthModal";
+import { useAuth } from "@client/context/AuthContext";
 
 export function HomePage() {
+  const { isAuthenticated, isLoading } = useAuth();
+  const [showAuthModal, setShowAuthModal] = useState(false);
+
   return (
     <div className="min-h-screen p-4 sm:p-8">
-      <header className="text-center mb-8 sm:mb-12">
-        <h1 className="font-display text-4xl sm:text-5xl text-pencil mb-2 text-shadow">
-          Word Guess Who
-        </h1>
-        <p className="font-ui text-pencil/70">
-          A two-player game for practicing sight & spelling words
-        </p>
-        <div className="mt-4">
-          <Link
-            to="/instructor"
-            className="btn-secondary inline-block text-sm py-2 px-4"
-          >
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        initialMode="login"
+      />
+
+      <header className="max-w-4xl mx-auto mb-8 sm:mb-12">
+        <div className="flex justify-end gap-3 mb-4">
+          <Link to="/instructor" className="btn-secondary text-sm py-2 px-4">
             Instructor Dashboard
           </Link>
+          {!isLoading &&
+            (isAuthenticated ? (
+              <Link
+                to="/instructor/profile"
+                className="btn-secondary inline-flex items-center justify-center w-10 h-10 p-0"
+                aria-label="Instructor profile"
+                title="Instructor profile"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  aria-hidden="true"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M20 21a8 8 0 10-16 0"
+                  />
+                  <circle cx="12" cy="8" r="4" />
+                </svg>
+              </Link>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowAuthModal(true)}
+                className="btn-secondary text-sm py-2 px-4"
+              >
+                Instructor Sign In
+              </button>
+            ))}
+        </div>
+        <div className="text-center">
+          <h1 className="font-display text-4xl sm:text-5xl text-pencil mb-2 text-shadow">
+            Word Guess Who
+          </h1>
+          <p className="font-ui text-pencil/70">
+            A two-player game for practicing sight & spelling words
+          </p>
         </div>
       </header>
 

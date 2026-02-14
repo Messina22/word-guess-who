@@ -9,6 +9,7 @@ import type {
   Instructor,
   RegisterInput,
   LoginInput,
+  ChangePasswordInput,
   StudentLoginInput,
   StudentAuthResponse,
   Student,
@@ -119,6 +120,12 @@ export const api = {
         method: "POST",
         body: JSON.stringify({ token, password }),
         authenticated: false,
+      }),
+
+    changePassword: (input: ChangePasswordInput) =>
+      request<{ message: string }>("/auth/change-password", {
+        method: "POST",
+        body: JSON.stringify(input),
       }),
 
     studentLogin: (input: StudentLoginInput) =>

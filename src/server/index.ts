@@ -16,6 +16,7 @@ import {
   handleListInstructors,
   handleForgotPassword,
   handleResetPassword,
+  handleChangePassword,
 } from "./routes/auth";
 import { handleStudentLogin, handleStudentMe } from "./routes/students";
 import {
@@ -190,6 +191,9 @@ async function handleRequest(
   }
   if (path === "/api/auth/reset-password" && method === "POST") {
     return handleResetPassword(request);
+  }
+  if (path === "/api/auth/change-password" && method === "POST") {
+    return handleChangePassword(request);
   }
 
   // Student auth routes

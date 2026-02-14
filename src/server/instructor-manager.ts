@@ -125,6 +125,18 @@ export function getInstructorById(id: string): Instructor | null {
   return row ? rowToInstructor(row) : null;
 }
 
+/** Get an instructor password hash by ID */
+export function getInstructorPasswordHashById(id: string): string | null {
+  const db = getDb();
+  const row = db
+    .query<{ password_hash: string }, [string]>(
+      `SELECT password_hash FROM instructors WHERE id = ?`
+    )
+    .get(id);
+
+  return row?.password_hash ?? null;
+}
+
 /** Get an instructor by email (case-insensitive) */
 export function getInstructorByEmail(email: string): Instructor | null {
   const db = getDb();

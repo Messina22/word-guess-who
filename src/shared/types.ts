@@ -124,6 +124,12 @@ export interface LoginInput {
   password: string;
 }
 
+/** Input for authenticated password change */
+export interface ChangePasswordInput {
+  currentPassword: string;
+  newPassword: string;
+}
+
 // ============================================
 // Class & Student Types
 // ============================================
