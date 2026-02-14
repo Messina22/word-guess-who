@@ -222,12 +222,34 @@ export function consumeResetToken(token: string): void {
   );
 }
 
-/** Update an instructor's password */
-export function updateInstructorPassword(instructorId: string, newPasswordHash: string): void {
+/** Update an instructor's password.
+ * When expectedOldHash is provided, performs an atomic update that only succeeds
+ * if the current password hash matches. Returns true if the update succeeded,
+ * false if the expectedOldHash didn't match (indicating the password was changed
+ * by another concurrent request).
+ * When expectedOldHash is not provided, performs a regular update (for token-based resets).
+ */
+export function updateInstructorPassword(
+  instructorId: string,
+  newPasswordHash: string,
+  expectedOldHash?: string
+): boolean {
   const db = getDb();
-  db.run(
-    `UPDATE instructors SET password_hash = ?, updated_at = datetime('now')
-     WHERE id = ?`,
-    [newPasswordHash, instructorId]
-  );
+  if (expectedOldHash !== undefined) {
+    // Atomic update: only succeeds if current hash matches expected
+    const result = db.run(
+      `UPDATE instructors SET password_hash = ?, updated_at = datetime('now')
+       WHERE id = ? AND password_hash = ?`,
+      [newPasswordHash, instructorId, expectedOldHash]
+    );
+    return result.changes > 0;
+  } else {
+    // Non-atomic update: for token-based resets
+    const result = db.run(
+      `UPDATE instructors SET password_hash = ?, updated_at = datetime('now')
+       WHERE id = ?`,
+      [newPasswordHash, instructorId]
+    );
+    return result.changes > 0;
+  }
 }
