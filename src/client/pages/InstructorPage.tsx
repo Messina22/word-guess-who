@@ -223,7 +223,7 @@ export function InstructorPage() {
   const refreshConfigs = async () => {
     setListLoading(true);
     setListError(null);
-    const response = await api.configs.list();
+    const response = await api.configs.list(undefined, true);
     if (response.success && response.data) {
       setConfigs(response.data);
     } else {

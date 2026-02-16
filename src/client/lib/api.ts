@@ -143,9 +143,16 @@ export const api = {
   },
 
   configs: {
-    list: (classId?: string) => {
-      const params = classId ? `?classId=${encodeURIComponent(classId)}` : "";
-      return request<GameConfig[]>(`/configs${params}`);
+    list: (classId?: string, ownedOnly?: boolean) => {
+      const searchParams = new URLSearchParams();
+      if (classId) {
+        searchParams.set("classId", classId);
+      }
+      if (ownedOnly) {
+        searchParams.set("ownedOnly", "true");
+      }
+      const params = searchParams.toString();
+      return request<GameConfig[]>(`/configs${params ? `?${params}` : ""}`);
     },
 
     get: (id: string) =>
