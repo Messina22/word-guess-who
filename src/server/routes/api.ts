@@ -1,6 +1,7 @@
 import type { GameConfig, GameConfigInput, Instructor } from "@shared/types";
 import {
   listConfigs,
+  listOwnedConfigs,
   listPublicConfigs,
   getConfig,
   createConfig,
@@ -42,11 +43,12 @@ async function getInstructorFromRequest(
 export async function handleListConfigs(request: Request): Promise<Response> {
   const url = new URL(request.url);
   const classId = url.searchParams.get("classId");
+  const ownedOnly = url.searchParams.get("ownedOnly") === "true";
   const instructor = await getInstructorFromRequest(request);
 
   let configs: GameConfig[];
   if (instructor) {
-    configs = listConfigs(instructor.id);
+    configs = ownedOnly ? listOwnedConfigs(instructor.id) : listConfigs(instructor.id);
   } else if (classId) {
     const cls = getClassById(classId);
     configs = cls ? listConfigs(cls.instructorId) : listPublicConfigs();

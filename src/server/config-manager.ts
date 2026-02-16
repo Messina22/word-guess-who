@@ -39,6 +39,20 @@ export function listConfigs(instructorId?: string): GameConfig[] {
   return rows.map(rowToConfig);
 }
 
+/** List only configurations created by a specific instructor */
+export function listOwnedConfigs(instructorId: string): GameConfig[] {
+  const db = getDb();
+  const rows = db
+    .query<GameConfigRow, [string]>(
+      `SELECT id, name, config_json, owner_id, is_system_template, is_public, created_at, updated_at
+       FROM game_configs
+       WHERE owner_id = ?
+       ORDER BY updated_at DESC`
+    )
+    .all(instructorId);
+  return rows.map(rowToConfig);
+}
+
 /** List only public configurations and system templates (for unauthenticated users) */
 export function listPublicConfigs(): GameConfig[] {
   const db = getDb();
