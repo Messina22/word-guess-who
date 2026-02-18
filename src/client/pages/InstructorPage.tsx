@@ -8,13 +8,8 @@ import type {
   GameConfig,
   GameConfigInput,
   QuestionCategory,
-  Instructor,
 } from "@shared/types";
 import { generateIdFromName } from "@shared/validation";
-import { ClassList } from "@client/components/classes/ClassList";
-import { ClassDetail } from "@client/components/classes/ClassDetail";
-
-type DashboardTab = "configs" | "classes";
 
 const questionCategories: QuestionCategory[] = [
   "letters",
@@ -101,9 +96,6 @@ export function InstructorPage() {
     logout,
   } = useAuth();
 
-  const [activeTab, setActiveTab] = useState<DashboardTab>("configs");
-  const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
-
   const [configs, setConfigs] = useState<GameConfig[]>([]);
   const [listLoading, setListLoading] = useState(true);
   const [listError, setListError] = useState<string | null>(null);
@@ -112,9 +104,6 @@ export function InstructorPage() {
   const [authModalMode, setAuthModalMode] = useState<"login" | "register">(
     "login"
   );
-  const [instructorAccounts, setInstructorAccounts] = useState<Instructor[]>([]);
-  const [accountsLoading, setAccountsLoading] = useState(false);
-  const [accountsError, setAccountsError] = useState<string | null>(null);
 
   const [selectedConfigId, setSelectedConfigId] = useState<string | null>(null);
   const [draftSourceId, setDraftSourceId] = useState<string | null>(null);
@@ -223,7 +212,7 @@ export function InstructorPage() {
   const refreshConfigs = async () => {
     setListLoading(true);
     setListError(null);
-    const response = await api.configs.list(undefined, true);
+    const response = await api.configs.list(true);
     if (response.success && response.data) {
       setConfigs(response.data);
     } else {
@@ -242,39 +231,6 @@ export function InstructorPage() {
     }
   }, [authLoading, isAuthenticated]);
 
-  useEffect(() => {
-    if (authLoading || !isAuthenticated || !import.meta.env.DEV) {
-      setInstructorAccounts([]);
-      setAccountsLoading(false);
-      setAccountsError(null);
-      return;
-    }
-
-    let isMounted = true;
-    setAccountsLoading(true);
-    setAccountsError(null);
-
-    void api.auth.listInstructors().then((response) => {
-      if (!isMounted) {
-        return;
-      }
-      if (response.success && response.data) {
-        setInstructorAccounts(response.data);
-      } else {
-        setInstructorAccounts([]);
-        setAccountsError(
-          response.error ||
-            response.errors?.join(", ") ||
-            "Failed to load instructor accounts."
-        );
-      }
-      setAccountsLoading(false);
-    });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [authLoading, isAuthenticated]);
 
   const handleSelectConfig = (config: GameConfig) => {
     setSelectedConfigId(config.id);
@@ -632,48 +588,6 @@ export function InstructorPage() {
               {instructor.email})
             </p>
 
-            {import.meta.env.DEV && (
-              <div className="border-t border-kraft/30 pt-3">
-                <div className="flex items-center justify-between mb-2">
-                  <p className="font-ui text-xs uppercase tracking-wide text-pencil/70">
-                    Registered Instructor Accounts (local dev)
-                  </p>
-                  <span className="text-xs text-pencil/60">
-                    {instructorAccounts.length} account
-                    {instructorAccounts.length === 1 ? "" : "s"}
-                  </span>
-                </div>
-
-                {accountsLoading && (
-                  <p className="font-ui text-xs text-pencil/60">
-                    Loading accounts...
-                  </p>
-                )}
-
-                {accountsError && !accountsLoading && (
-                  <p className="font-ui text-xs text-paper-red">
-                    {accountsError}
-                  </p>
-                )}
-
-                {!accountsLoading && !accountsError && (
-                  <ul className="space-y-1 text-xs text-pencil">
-                    {instructorAccounts.map((account) => (
-                      <li
-                        key={account.id}
-                        className="flex flex-wrap items-center gap-x-2"
-                      >
-                        <span className="font-medium">{account.name}</span>
-                        <span className="text-pencil/60">({account.email})</span>
-                      </li>
-                    ))}
-                    {instructorAccounts.length === 0 && (
-                      <li className="text-pencil/60">No accounts registered yet.</li>
-                    )}
-                  </ul>
-                )}
-              </div>
-            )}
           </div>
         )}
 
@@ -707,59 +621,8 @@ export function InstructorPage() {
         )}
       </header>
 
-      {/* Tab Navigation */}
-      {isAuthenticated && (
-        <div className="max-w-6xl mx-auto mb-6">
-          <div className="flex gap-1 border-b-2 border-kraft/30">
-            <button
-              type="button"
-              onClick={() => setActiveTab("configs")}
-              className={`px-6 py-3 font-display text-sm rounded-t-lg transition ${
-                activeTab === "configs"
-                  ? "bg-white border-2 border-b-0 border-kraft/30 text-pencil -mb-[2px]"
-                  : "text-pencil/60 hover:text-pencil"
-              }`}
-            >
-              Configurations
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab("classes")}
-              className={`px-6 py-3 font-display text-sm rounded-t-lg transition ${
-                activeTab === "classes"
-                  ? "bg-white border-2 border-b-0 border-kraft/30 text-pencil -mb-[2px]"
-                  : "text-pencil/60 hover:text-pencil"
-              }`}
-            >
-              Classes
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Classes Tab */}
-      {activeTab === "classes" && isAuthenticated && (
-        <main className="max-w-6xl mx-auto grid lg:grid-cols-[1fr_2fr] gap-8">
-          <ClassList
-            selectedClassId={selectedClassId}
-            onSelectClass={setSelectedClassId}
-          />
-          <section>
-            {selectedClassId ? (
-              <ClassDetail classId={selectedClassId} />
-            ) : (
-              <div className="paper-card p-6 text-center text-pencil/60">
-                <p className="font-ui text-sm">
-                  Select a class on the left or create a new one to manage students.
-                </p>
-              </div>
-            )}
-          </section>
-        </main>
-      )}
-
-      {/* Configurations Tab */}
-      {(activeTab === "configs" || !isAuthenticated) && (
+      {/* Configurations */}
+      {(
       <main className="max-w-6xl mx-auto grid lg:grid-cols-[1fr_2fr] gap-8">
         <section className="paper-card p-6">
           <div className="flex items-center justify-between mb-4">

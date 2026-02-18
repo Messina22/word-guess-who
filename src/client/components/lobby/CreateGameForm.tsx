@@ -20,7 +20,7 @@ const GRADE_ORDER = [
 
 export function CreateGameForm() {
   const navigate = useNavigate();
-  const { student, isStudentAuthenticated } = useStudent();
+  const { isStudentAuthenticated } = useStudent();
   const { isAuthenticated: isInstructorAuthenticated } = useAuth();
   const [configs, setConfigs] = useState<GameConfig[]>([]);
   const [selectedConfigId, setSelectedConfigId] = useState("");
@@ -44,9 +44,7 @@ export function CreateGameForm() {
     let cancelled = false;
     async function fetchConfigs() {
       setConfigsLoading(true);
-      const classId =
-        isStudentAuthenticated && student ? student.classId : undefined;
-      const response = await api.configs.list(classId);
+      const response = await api.configs.list();
       if (cancelled) return;
       if (response.success && response.data) {
         setConfigs(response.data);
@@ -60,7 +58,7 @@ export function CreateGameForm() {
     return () => {
       cancelled = true;
     };
-  }, [isStudentAuthenticated, student]);
+  }, [isStudentAuthenticated]);
 
   // Reset showOnlyLastQuestion when switching to a local mode
   useEffect(() => {
@@ -96,9 +94,6 @@ export function CreateGameForm() {
         : showOnlyLastQuestion,
       randomSecretWords,
       sharedComputerMode,
-      ...(isStudentAuthenticated && student
-        ? { classId: student.classId, studentId: student.id }
-        : {}),
     });
 
     if (response.success && response.data) {

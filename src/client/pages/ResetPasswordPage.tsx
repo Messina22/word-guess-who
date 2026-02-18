@@ -1,18 +1,50 @@
-import { useState } from "react";
-import { useSearchParams, Link } from "react-router-dom";
-import { api } from "@client/lib/api";
+import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+import { supabase } from "@client/lib/supabase";
 
 export function ResetPasswordPage() {
-  const [searchParams] = useSearchParams();
-  const token = searchParams.get("token");
-
+  const [isValidSession, setIsValidSession] = useState<boolean | null>(null);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 
-  if (!token) {
+  useEffect(() => {
+    // Supabase embeds the recovery token in the URL fragment (#access_token=...&type=recovery)
+    // onAuthStateChange fires with SIGNED_IN when the recovery link is visited
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsValidSession(true);
+      }
+    });
+
+    // Also check if we already have a recovery session active
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        setIsValidSession(true);
+      } else {
+        // Give onAuthStateChange a moment to fire from URL hash
+        setTimeout(() => {
+          setIsValidSession((prev) => prev ?? false);
+        }, 1000);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  if (isValidSession === null) {
+    return (
+      <div className="min-h-screen bg-paper flex items-center justify-center p-4">
+        <div className="paper-card p-8 w-full max-w-md text-center">
+          <p className="text-pencil/70">Verifying reset link...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isValidSession) {
     return (
       <div className="min-h-screen bg-paper flex items-center justify-center p-4">
         <div className="paper-card p-8 w-full max-w-md text-center">
@@ -59,17 +91,13 @@ export function ResetPasswordPage() {
     }
 
     setIsLoading(true);
-    const result = await api.auth.resetPassword(token, password);
+    const { error: updateError } = await supabase.auth.updateUser({ password });
     setIsLoading(false);
 
-    if (result.success) {
-      setSuccess(true);
+    if (updateError) {
+      setError(updateError.message || "Failed to reset password. The link may have expired.");
     } else {
-      setError(
-        result.error ||
-          (result.errors?.length ? result.errors.join(". ") : null) ||
-          "Failed to reset password. The link may have expired."
-      );
+      setSuccess(true);
     }
   };
 

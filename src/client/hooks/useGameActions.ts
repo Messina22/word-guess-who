@@ -12,6 +12,7 @@ export function useGameActions() {
     endTurn,
     updatePlayerName,
     setSecretWordHidden,
+    refreshGameState,
     dispatch,
     joinedGameCodeRef,
   } = useGame();
@@ -35,6 +36,7 @@ export function useGameActions() {
     endTurn,
     updatePlayerName,
     setSecretWordHidden,
+    refreshGameState,
     clearError,
     reset,
     joinedGameCodeRef,

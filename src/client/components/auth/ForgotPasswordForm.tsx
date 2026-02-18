@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { api } from "@client/lib/api";
+import { useAuth } from "@client/context/AuthContext";
 
 interface ForgotPasswordFormProps {
   onSwitchToLogin: () => void;
 }
 
 export function ForgotPasswordForm({ onSwitchToLogin }: ForgotPasswordFormProps) {
+  const { forgotPassword } = useAuth();
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -16,17 +17,13 @@ export function ForgotPasswordForm({ onSwitchToLogin }: ForgotPasswordFormProps)
     setError(null);
     setIsLoading(true);
 
-    const result = await api.auth.forgotPassword(email);
+    const result = await forgotPassword(email);
     setIsLoading(false);
 
     if (result.success) {
       setSubmitted(true);
     } else {
-      setError(
-        result.error ||
-          (result.errors?.length ? result.errors.join(". ") : null) ||
-          "Something went wrong. Please try again."
-      );
+      setError(result.error || "Something went wrong. Please try again.");
     }
   };
 

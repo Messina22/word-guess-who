@@ -2,15 +2,8 @@ import { useMemo, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@client/context/AuthContext";
 import { AuthModal } from "@client/components/auth/AuthModal";
-import { api } from "@client/lib/api";
+import { supabase } from "@client/lib/supabase";
 
-function formatDate(value: string): string {
-  const date = new Date(value);
-  if (Number.isNaN(date.valueOf())) {
-    return "Unknown";
-  }
-  return date.toLocaleString();
-}
 
 export function InstructorProfilePage() {
   const { instructor, isAuthenticated, isLoading } = useAuth();
@@ -66,22 +59,26 @@ export function InstructorProfilePage() {
     }
 
     setIsSaving(true);
-    const response = await api.auth.changePassword({
-      currentPassword,
-      newPassword,
-    });
 
-    if (response.success && response.data) {
-      setFormMessage(response.data.message);
+    // Verify current password by re-authenticating
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: instructor!.email,
+      password: currentPassword,
+    });
+    if (signInError) {
+      setFormError("Current password is incorrect.");
+      setIsSaving(false);
+      return;
+    }
+
+    const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
+    if (updateError) {
+      setFormError(updateError.message || "Failed to change password.");
+    } else {
+      setFormMessage("Password updated successfully.");
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
-    } else {
-      setFormError(
-        response.error ||
-          response.errors?.join(", ") ||
-          "Failed to change password."
-      );
     }
 
     setIsSaving(false);
@@ -146,22 +143,6 @@ export function InstructorProfilePage() {
                     Email
                   </dt>
                   <dd className="text-pencil font-ui">{instructor.email}</dd>
-                </div>
-                <div>
-                  <dt className="text-xs uppercase tracking-wide text-pencil/60">
-                    Created
-                  </dt>
-                  <dd className="text-pencil/80 font-ui">
-                    {formatDate(instructor.createdAt)}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-xs uppercase tracking-wide text-pencil/60">
-                    Last Updated
-                  </dt>
-                  <dd className="text-pencil/80 font-ui">
-                    {formatDate(instructor.updatedAt)}
-                  </dd>
                 </div>
               </dl>
             </section>
