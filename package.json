@@ -4,8 +4,8 @@
   "type": "module",
   "scripts": {
     "dev:client": "vite",
-    "dev:api": "vercel dev",
-    "dev:all": "concurrently \"bun run dev:client\" \"bun run dev:api\"",
+    "dev:api": "vercel dev --yes",
+    "dev:all": "vercel dev --yes",
     "build:client": "vite build",
     "test": "bun test",
     "lint": "eslint src --ext .ts,.tsx",

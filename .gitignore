@@ -40,3 +40,4 @@ coverage/
 
 # Git worktrees
 .worktrees/
+.vercel
