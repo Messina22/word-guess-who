@@ -301,7 +301,7 @@ function gameReducer(
 interface GameContextValue extends GameContextState {
   dispatch: React.Dispatch<GameAction>;
   send: (message: ClientMessage) => void;
-  joinGame: (gameCode: string, playerName: string, playerId?: string) => void;
+  joinGame: (gameCode: string, playerName: string, playerId?: string, studentId?: string) => void;
   flipCard: (cardIndex: number) => void;
   askQuestion: (question: string) => void;
   answerQuestion: (answer: boolean) => void;
@@ -352,13 +352,14 @@ export function GameProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const joinGame = useCallback(
-    (gameCode: string, playerName: string, playerId?: string) => {
+    (gameCode: string, playerName: string, playerId?: string, studentId?: string) => {
       joinedGameCodeRef.current = gameCode;
       send({
         type: "join_game",
         gameCode,
         playerName,
         playerId,
+        studentId,
       });
     },
     [send],

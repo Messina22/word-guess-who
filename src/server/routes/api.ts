@@ -1,6 +1,7 @@
-import type { GameConfig, Instructor } from "@shared/types";
+import type { GameConfig, GameConfigInput, Instructor } from "@shared/types";
 import {
   listConfigs,
+  listOwnedConfigs,
   listPublicConfigs,
   getConfig,
   createConfig,
@@ -9,6 +10,7 @@ import {
 } from "../config-manager";
 import { extractTokenFromHeader, verifyToken } from "../auth";
 import { getInstructorById } from "../instructor-manager";
+import { getClassById } from "../class-manager";
 import { jsonResponse } from "../utils/response";
 
 /** Handle OPTIONS preflight requests */
@@ -32,19 +34,27 @@ async function getInstructorFromRequest(
   if (!token) return null;
 
   const payload = await verifyToken(token);
-  if (!payload) return null;
+  if (!payload || payload.role !== "instructor") return null;
 
   return getInstructorById(payload.instructorId);
 }
 
-/** GET /api/configs - List public configurations and system templates */
+/** GET /api/configs - List configurations based on auth state and optional classId */
 export async function handleListConfigs(request: Request): Promise<Response> {
+  const url = new URL(request.url);
+  const classId = url.searchParams.get("classId");
+  const ownedOnly = url.searchParams.get("ownedOnly") === "true";
   const instructor = await getInstructorFromRequest(request);
 
-  // If authenticated, include instructor's own configs too
-  const configs = instructor
-    ? listConfigs(instructor.id)
-    : listPublicConfigs();
+  let configs: GameConfig[];
+  if (instructor) {
+    configs = ownedOnly ? listOwnedConfigs(instructor.id) : listConfigs(instructor.id);
+  } else if (classId) {
+    const cls = getClassById(classId);
+    configs = cls ? listConfigs(cls.instructorId) : listPublicConfigs();
+  } else {
+    configs = listPublicConfigs();
+  }
 
   return jsonResponse<GameConfig[]>({ success: true, data: configs });
 }
@@ -81,7 +91,7 @@ export async function handleCreateConfig(request: Request): Promise<Response> {
     );
   }
 
-  const result = createConfig(body as any, instructor.id);
+  const result = createConfig(body as GameConfigInput, instructor.id);
   if (!result.success) {
     return jsonResponse<null>(
       { success: false, errors: result.errors },
@@ -138,7 +148,7 @@ export async function handleUpdateConfig(
     );
   }
 
-  const result = updateConfig(id, body as any, instructor.id);
+  const result = updateConfig(id, body as GameConfigInput, instructor.id);
   if (!result.success) {
     const is404 = result.errors.some((e) => e.includes("not found"));
     return jsonResponse<null>(

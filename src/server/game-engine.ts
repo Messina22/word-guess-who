@@ -5,10 +5,8 @@
 
 import type {
   GameSession,
-  GameState,
   Player,
   CardState,
-  GamePhase,
   GridSize,
   WordEntry,
 } from "@shared/types";

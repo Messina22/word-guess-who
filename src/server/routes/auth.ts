@@ -4,18 +4,26 @@ import {
   validateLoginInput,
   validateForgotPasswordInput,
   validateResetPasswordInput,
+  validateChangePasswordInput,
 } from "@shared/validation";
 import {
   createInstructor,
   authenticateInstructor,
   getInstructorById,
   getInstructorByEmail,
+  getInstructorPasswordHashById,
+  listInstructors,
   createPasswordResetToken,
   verifyResetToken,
   consumeResetToken,
   updateInstructorPassword,
 } from "../instructor-manager";
-import { extractTokenFromHeader, verifyToken, hashPassword } from "../auth";
+import {
+  extractTokenFromHeader,
+  verifyToken,
+  hashPassword,
+  verifyPassword,
+} from "../auth";
 import { jsonResponse } from "../utils/response";
 import { sendPasswordResetEmail } from "../email";
 
@@ -107,7 +115,7 @@ export async function handleMe(request: Request): Promise<Response> {
   }
 
   const payload = await verifyToken(token);
-  if (!payload) {
+  if (!payload || payload.role !== "instructor") {
     return jsonResponse<null>(
       { success: false, error: "Invalid or expired token" },
       401
@@ -123,6 +131,36 @@ export async function handleMe(request: Request): Promise<Response> {
   }
 
   return jsonResponse<Instructor>({ success: true, data: instructor });
+}
+
+/** GET /api/auth/instructors - List instructor accounts (development only) */
+export async function handleListInstructors(
+  request: Request
+): Promise<Response> {
+  if (process.env.NODE_ENV === "production") {
+    return jsonResponse<null>({ success: false, error: "Not found" }, 404);
+  }
+
+  const authHeader = request.headers.get("Authorization");
+  const token = extractTokenFromHeader(authHeader);
+
+  if (!token) {
+    return jsonResponse<null>(
+      { success: false, error: "Authentication required" },
+      401
+    );
+  }
+
+  const payload = await verifyToken(token);
+  if (!payload || payload.role !== "instructor") {
+    return jsonResponse<null>(
+      { success: false, error: "Invalid or expired token" },
+      401
+    );
+  }
+
+  const instructors = listInstructors();
+  return jsonResponse<Instructor[]>({ success: true, data: instructors });
 }
 
 // ============================================
@@ -254,6 +292,105 @@ export async function handleResetPassword(request: Request): Promise<Response> {
     console.error("Reset password error:", error);
     return jsonResponse<null>(
       { success: false, error: "Failed to reset password. Please try again." },
+      500
+    );
+  }
+}
+
+/** POST /api/auth/change-password - Change password for signed-in instructor */
+export async function handleChangePassword(request: Request): Promise<Response> {
+  const authHeader = request.headers.get("Authorization");
+  const token = extractTokenFromHeader(authHeader);
+
+  if (!token) {
+    return jsonResponse<null>(
+      { success: false, error: "Authentication required" },
+      401
+    );
+  }
+
+  const payload = await verifyToken(token);
+  if (!payload || payload.role !== "instructor") {
+    return jsonResponse<null>(
+      { success: false, error: "Invalid or expired token" },
+      401
+    );
+  }
+
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResponse<null>(
+      { success: false, error: "Invalid JSON body" },
+      400
+    );
+  }
+
+  const validation = validateChangePasswordInput(body);
+  if (!validation.success) {
+    return jsonResponse<null>(
+      { success: false, errors: validation.errors },
+      400
+    );
+  }
+
+  const { currentPassword, newPassword } = validation.data;
+  if (currentPassword === newPassword) {
+    return jsonResponse<null>(
+      {
+        success: false,
+        error: "New password must be different from current password",
+      },
+      400
+    );
+  }
+
+  try {
+    const passwordHash = getInstructorPasswordHashById(payload.instructorId);
+    if (!passwordHash) {
+      return jsonResponse<null>(
+        { success: false, error: "Instructor not found" },
+        404
+      );
+    }
+
+    const validCurrentPassword = await verifyPassword(
+      currentPassword,
+      passwordHash
+    );
+    if (!validCurrentPassword) {
+      return jsonResponse<null>(
+        { success: false, error: "Current password is incorrect" },
+        401
+      );
+    }
+
+    const newPasswordHash = await hashPassword(newPassword);
+    // Atomic update: only succeeds if the current password hash hasn't changed
+    // since we verified it. This prevents race conditions with concurrent requests.
+    const updated = updateInstructorPassword(
+      payload.instructorId,
+      newPasswordHash,
+      passwordHash
+    );
+
+    if (!updated) {
+      // The password was changed by another request after we verified it
+      return jsonResponse<null>(
+        { success: false, error: "Password was changed by another request. Please try again." },
+        409
+      );
+    }
+
+    return jsonResponse<{ message: string }>({
+      success: true,
+      data: { message: "Password changed successfully." },
+    });
+  } catch (error) {
+    console.error("Change password error:", error);
+    return jsonResponse<null>(
+      { success: false, error: "Failed to change password. Please try again." },
       500
     );
   }

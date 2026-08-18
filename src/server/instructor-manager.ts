@@ -125,6 +125,18 @@ export function getInstructorById(id: string): Instructor | null {
   return row ? rowToInstructor(row) : null;
 }
 
+/** Get an instructor password hash by ID */
+export function getInstructorPasswordHashById(id: string): string | null {
+  const db = getDb();
+  const row = db
+    .query<{ password_hash: string }, [string]>(
+      `SELECT password_hash FROM instructors WHERE id = ?`
+    )
+    .get(id);
+
+  return row?.password_hash ?? null;
+}
+
 /** Get an instructor by email (case-insensitive) */
 export function getInstructorByEmail(email: string): Instructor | null {
   const db = getDb();
@@ -136,6 +148,20 @@ export function getInstructorByEmail(email: string): Instructor | null {
     .get(email);
 
   return row ? rowToInstructor(row) : null;
+}
+
+/** List all instructors (for local development tooling) */
+export function listInstructors(): Instructor[] {
+  const db = getDb();
+  const rows = db
+    .query<InstructorRow, []>(
+      `SELECT id, email, password_hash, name, created_at, updated_at
+       FROM instructors
+       ORDER BY datetime(created_at) ASC`
+    )
+    .all();
+
+  return rows.map(rowToInstructor);
 }
 
 /** Hash a token with SHA-256 */
@@ -196,12 +222,34 @@ export function consumeResetToken(token: string): void {
   );
 }
 
-/** Update an instructor's password */
-export function updateInstructorPassword(instructorId: string, newPasswordHash: string): void {
+/** Update an instructor's password.
+ * When expectedOldHash is provided, performs an atomic update that only succeeds
+ * if the current password hash matches. Returns true if the update succeeded,
+ * false if the expectedOldHash didn't match (indicating the password was changed
+ * by another concurrent request).
+ * When expectedOldHash is not provided, performs a regular update (for token-based resets).
+ */
+export function updateInstructorPassword(
+  instructorId: string,
+  newPasswordHash: string,
+  expectedOldHash?: string
+): boolean {
   const db = getDb();
-  db.run(
-    `UPDATE instructors SET password_hash = ?, updated_at = datetime('now')
-     WHERE id = ?`,
-    [newPasswordHash, instructorId]
-  );
+  if (expectedOldHash !== undefined) {
+    // Atomic update: only succeeds if current hash matches expected
+    const result = db.run(
+      `UPDATE instructors SET password_hash = ?, updated_at = datetime('now')
+       WHERE id = ? AND password_hash = ?`,
+      [newPasswordHash, instructorId, expectedOldHash]
+    );
+    return result.changes > 0;
+  } else {
+    // Non-atomic update: for token-based resets
+    const result = db.run(
+      `UPDATE instructors SET password_hash = ?, updated_at = datetime('now')
+       WHERE id = ?`,
+      [newPasswordHash, instructorId]
+    );
+    return result.changes > 0;
+  }
 }
