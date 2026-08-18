@@ -33,6 +33,7 @@ export default [
         Request: "readonly",
         RequestInit: "readonly",
         URL: "readonly",
+        URLSearchParams: "readonly",
         Buffer: "readonly",
         React: "readonly",
         require: "readonly",
