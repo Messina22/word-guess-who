@@ -266,7 +266,7 @@ export function WordSelectionScreen() {
               <SelectionCard
                 key={card.index}
                 card={card}
-                onClick={() => selectSecretWord(card.index, 1)} // Select for player index 1
+                onClick={() => selectSecretWord(card.word)}
               />
             ))}
           </div>
@@ -370,7 +370,7 @@ export function WordSelectionScreen() {
             <SelectionCard
               key={card.index}
               card={card}
-              onClick={() => selectSecretWord(card.index)}
+              onClick={() => selectSecretWord(card.word)}
             />
           ))}
         </div>

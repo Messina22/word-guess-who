@@ -1,78 +1,27 @@
-import type {
-  ApiResponse,
-  GameConfig,
-  GameConfigInput,
-  CreateGameInput,
-  CreateGameResponse,
-  PublicGameSession,
-  AuthResponse,
-  Instructor,
-  RegisterInput,
-  LoginInput,
-  ChangePasswordInput,
-  StudentLoginInput,
-  StudentAuthResponse,
-  Student,
-  Class,
-  ClassWithRoster,
-} from "@shared/types";
+import type { ApiResponse, GameConfig, GameConfigInput } from "@shared/types";
+import { supabase } from "./supabase";
 
 const API_BASE = "/api";
-const AUTH_TOKEN_KEY = "authToken";
-const STUDENT_TOKEN_KEY = "studentToken";
 
-/** Get the stored auth token */
-export function getAuthToken(): string | null {
-  return localStorage.getItem(AUTH_TOKEN_KEY);
-}
-
-/** Set the auth token */
-export function setAuthToken(token: string): void {
-  localStorage.setItem(AUTH_TOKEN_KEY, token);
-}
-
-/** Clear the auth token */
-export function clearAuthToken(): void {
-  localStorage.removeItem(AUTH_TOKEN_KEY);
-}
-
-/** Get the stored student auth token */
-export function getStudentAuthToken(): string | null {
-  return localStorage.getItem(STUDENT_TOKEN_KEY);
-}
-
-/** Set the student auth token */
-export function setStudentAuthToken(token: string): void {
-  localStorage.setItem(STUDENT_TOKEN_KEY, token);
-}
-
-/** Clear the student auth token */
-export function clearStudentAuthToken(): void {
-  localStorage.removeItem(STUDENT_TOKEN_KEY);
-}
-
-/** Get auth headers if token exists */
-function getAuthHeaders(): Record<string, string> {
-  const token = getAuthToken();
-  return token ? { Authorization: `Bearer ${token}` } : {};
+/** Get the Authorization header from the active Supabase session */
+async function getAuthHeader(): Promise<Record<string, string>> {
+  const { data: { session } } = await supabase.auth.getSession();
+  return session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {};
 }
 
 async function request<T>(
   path: string,
-  options?: RequestInit & { authenticated?: boolean }
+  options?: RequestInit & { skipAuth?: boolean },
 ): Promise<ApiResponse<T>> {
   try {
+    const authHeaders = options?.skipAuth ? {} : await getAuthHeader();
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
-      ...(options?.authenticated !== false ? getAuthHeaders() : {}),
+      ...authHeaders,
       ...(options?.headers as Record<string, string> | undefined),
     };
 
-    const response = await fetch(`${API_BASE}${path}`, {
-      ...options,
-      headers,
-    });
-
+    const response = await fetch(`${API_BASE}${path}`, { ...options, headers });
     return (await response.json()) as ApiResponse<T>;
   } catch (error) {
     return {
@@ -82,83 +31,15 @@ async function request<T>(
   }
 }
 
-/** Get student auth headers if token exists */
-function getStudentAuthHeaders(): Record<string, string> {
-  const token = getStudentAuthToken();
-  return token ? { Authorization: `Bearer ${token}` } : {};
-}
-
 export const api = {
-  auth: {
-    register: (input: RegisterInput) =>
-      request<AuthResponse>("/auth/register", {
-        method: "POST",
-        body: JSON.stringify(input),
-        authenticated: false,
-      }),
-
-    login: (input: LoginInput) =>
-      request<AuthResponse>("/auth/login", {
-        method: "POST",
-        body: JSON.stringify(input),
-        authenticated: false,
-      }),
-
-    me: () => request<Instructor>("/auth/me"),
-
-    listInstructors: () => request<Instructor[]>("/auth/instructors"),
-
-    forgotPassword: (email: string) =>
-      request<{ message: string }>("/auth/forgot-password", {
-        method: "POST",
-        body: JSON.stringify({ email }),
-        authenticated: false,
-      }),
-
-    resetPassword: (token: string, password: string) =>
-      request<{ message: string }>("/auth/reset-password", {
-        method: "POST",
-        body: JSON.stringify({ token, password }),
-        authenticated: false,
-      }),
-
-    changePassword: (input: ChangePasswordInput) =>
-      request<{ message: string }>("/auth/change-password", {
-        method: "POST",
-        body: JSON.stringify(input),
-      }),
-
-    studentLogin: (input: StudentLoginInput) =>
-      request<StudentAuthResponse>("/auth/student-login", {
-        method: "POST",
-        body: JSON.stringify(input),
-        authenticated: false,
-      }),
-
-    studentMe: () =>
-      request<{ student: Student; className: string }>("/auth/student-me", {
-        authenticated: false,
-        headers: getStudentAuthHeaders(),
-      }),
-  },
-
   configs: {
-    list: (classId?: string, ownedOnly?: boolean) => {
-      const searchParams = new URLSearchParams();
-      if (classId) {
-        searchParams.set("classId", classId);
-      }
-      if (ownedOnly) {
-        searchParams.set("ownedOnly", "true");
-      }
-      const params = searchParams.toString();
-      return request<GameConfig[]>(`/configs${params ? `?${params}` : ""}`);
+    list: (ownedOnly?: boolean) => {
+      const params = ownedOnly ? "?ownedOnly=true" : "";
+      return request<GameConfig[]>(`/configs${params}`);
     },
 
     get: (id: string) =>
-      request<GameConfig>(`/configs/${encodeURIComponent(id)}`, {
-        authenticated: false,
-      }),
+      request<GameConfig>(`/configs/${encodeURIComponent(id)}`, { skipAuth: true }),
 
     create: (input: GameConfigInput & { isPublic?: boolean }) =>
       request<GameConfig>("/configs", {
@@ -173,53 +54,39 @@ export const api = {
       }),
 
     delete: (id: string) =>
-      request<null>(`/configs/${encodeURIComponent(id)}`, {
-        method: "DELETE",
-      }),
-  },
-
-  classes: {
-    create: (input: { name: string }) =>
-      request<Class>("/classes", {
-        method: "POST",
-        body: JSON.stringify(input),
-      }),
-
-    list: () =>
-      request<(Class & { studentCount: number })[]>("/classes"),
-
-    get: (id: string) =>
-      request<ClassWithRoster>(`/classes/${encodeURIComponent(id)}`),
-
-    update: (id: string, input: { name: string }) =>
-      request<Class>(`/classes/${encodeURIComponent(id)}`, {
-        method: "PUT",
-        body: JSON.stringify(input),
-      }),
-
-    delete: (id: string) =>
-      request<null>(`/classes/${encodeURIComponent(id)}`, {
-        method: "DELETE",
-      }),
-
-    removeStudent: (classId: string, studentId: string) =>
-      request<null>(
-        `/classes/${encodeURIComponent(classId)}/students/${encodeURIComponent(studentId)}`,
-        { method: "DELETE" }
-      ),
+      request<null>(`/configs/${encodeURIComponent(id)}`, { method: "DELETE" }),
   },
 
   games: {
-    create: (input: CreateGameInput) =>
-      request<CreateGameResponse>("/games", {
+    create: (input: {
+      configId: string;
+      isLocalMode?: boolean;
+      showOnlyLastQuestion?: boolean;
+      randomSecretWords?: boolean;
+      sharedComputerMode?: boolean;
+      playerName?: string;
+    }) =>
+      request<{ code: string; expiresAt: string }>("/games", {
         method: "POST",
         body: JSON.stringify(input),
-        authenticated: false,
       }),
 
     get: (code: string) =>
-      request<PublicGameSession>(`/games/${encodeURIComponent(code)}`, {
-        authenticated: false,
+      request<unknown>(`/games/${encodeURIComponent(code)}`),
+
+    join: (code: string, playerName?: string) =>
+      request<unknown>(`/games/${encodeURIComponent(code)}/join`, {
+        method: "POST",
+        body: JSON.stringify({ playerName }),
+      }),
+  },
+
+  auth: {
+    studentLogin: (classId: string, username: string) =>
+      request<{ session: unknown }>("/auth/student", {
+        method: "POST",
+        body: JSON.stringify({ classId, username }),
+        skipAuth: true,
       }),
   },
 };

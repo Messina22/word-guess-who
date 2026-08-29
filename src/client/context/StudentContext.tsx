@@ -7,12 +7,8 @@ import {
   type ReactNode,
 } from "react";
 import type { Student, StudentLoginInput } from "@shared/types";
-import {
-  api,
-  setStudentAuthToken,
-  clearStudentAuthToken,
-  getStudentAuthToken,
-} from "@client/lib/api";
+import { api } from "@client/lib/api";
+import { supabase } from "@client/lib/supabase";
 
 interface StudentState {
   student: Student | null;
@@ -30,6 +26,20 @@ interface StudentContextType extends StudentState {
 
 const StudentContext = createContext<StudentContextType | null>(null);
 
+function studentFromSession(
+  userId: string,
+  metadata: Record<string, unknown>
+): Student {
+  return {
+    id: userId,
+    username: metadata.username as string,
+    classId: metadata.class_id as string,
+    lastSeenAt: null,
+    createdAt: "",
+    updatedAt: "",
+  };
+}
+
 export function StudentProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<StudentState>({
     student: null,
@@ -38,70 +48,80 @@ export function StudentProvider({ children }: { children: ReactNode }) {
     isLoading: true,
   });
 
-  const refreshStudent = useCallback(async () => {
-    const token = getStudentAuthToken();
-    if (!token) {
-      setState({
-        student: null,
-        className: null,
-        isStudentAuthenticated: false,
-        isLoading: false,
-      });
-      return;
-    }
-
-    const response = await api.auth.studentMe();
-    if (response.success && response.data) {
-      setState({
-        student: response.data.student,
-        className: response.data.className,
-        isStudentAuthenticated: true,
-        isLoading: false,
-      });
-    } else {
-      clearStudentAuthToken();
-      setState({
-        student: null,
-        className: null,
-        isStudentAuthenticated: false,
-        isLoading: false,
-      });
-    }
-  }, []);
-
   useEffect(() => {
-    refreshStudent();
-  }, [refreshStudent]);
-
-  const studentLogin = useCallback(
-    async (input: StudentLoginInput) => {
-      const response = await api.auth.studentLogin(input);
-      if (response.success && response.data) {
-        setStudentAuthToken(response.data.token);
+    // Check current session on mount
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      const metadata = session?.user?.user_metadata ?? {};
+      if (session && metadata.role === "student") {
+        const student = studentFromSession(session.user.id, metadata);
         setState({
-          student: response.data.student,
-          className: response.data.className,
+          student,
+          className: student.classId,
           isStudentAuthenticated: true,
           isLoading: false,
         });
-        return { success: true as const };
+      } else {
+        setState({
+          student: null,
+          className: null,
+          isStudentAuthenticated: false,
+          isLoading: false,
+        });
       }
-      return {
-        success: false as const,
-        error: response.error || "Failed to join class",
-      };
-    },
-    []
-  );
-
-  const studentLogout = useCallback(() => {
-    clearStudentAuthToken();
-    setState({
-      student: null,
-      className: null,
-      isStudentAuthenticated: false,
-      isLoading: false,
     });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      const metadata = session?.user?.user_metadata ?? {};
+      if (session && metadata.role === "student") {
+        const student = studentFromSession(session.user.id, metadata);
+        setState({
+          student,
+          className: student.classId,
+          isStudentAuthenticated: true,
+          isLoading: false,
+        });
+      } else {
+        setState({
+          student: null,
+          className: null,
+          isStudentAuthenticated: false,
+          isLoading: false,
+        });
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const studentLogin = useCallback(async (input: StudentLoginInput) => {
+    const response = await api.auth.studentLogin(
+      input.classCode,
+      input.username
+    );
+    if (response.success && response.data) {
+      const session = response.data.session as {
+        access_token: string;
+        refresh_token: string;
+      };
+      const { error } = await supabase.auth.setSession({
+        access_token: session.access_token,
+        refresh_token: session.refresh_token,
+      });
+      if (error) {
+        return { success: false as const, error: error.message };
+      }
+      return { success: true as const };
+    }
+    return {
+      success: false as const,
+      error: response.error || "Failed to join class",
+    };
+  }, []);
+
+  const studentLogout = useCallback(async () => {
+    await supabase.auth.signOut();
   }, []);
 
   return (

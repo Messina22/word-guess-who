@@ -5,6 +5,7 @@ import path from "path";
 export default defineConfig({
   plugins: [react()],
   root: "src/client",
+  envDir: path.resolve(__dirname, "."),
   publicDir: "../../public",
   resolve: {
     alias: {
@@ -14,16 +15,6 @@ export default defineConfig({
   },
   server: {
     port: 5173,
-    proxy: {
-      "/api": {
-        target: "http://localhost:3000",
-        changeOrigin: true,
-      },
-      "/ws": {
-        target: "ws://localhost:3000",
-        ws: true,
-      },
-    },
   },
   build: {
     outDir: "../../dist/client",

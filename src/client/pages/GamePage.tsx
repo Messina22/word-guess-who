@@ -29,7 +29,7 @@ export function GamePage() {
     useGameActions();
   const { addGameResult, recordedGameCodes, markGameRecorded } =
     useSessionGameLog();
-  const { student, isStudentAuthenticated, isLoading: isStudentLoading } = useStudent();
+  const { isLoading: isStudentLoading } = useStudent();
   const [hasJoined, setHasJoined] = useState(false);
 
   useEffect(() => {
@@ -56,12 +56,10 @@ export function GamePage() {
         setHasJoined(true);
         return;
       }
-      const savedPlayerId = localStorage.getItem(`playerId_${code}`);
-      const studentId = isStudentAuthenticated && student ? student.id : undefined;
-      joinGame(code, playerName, savedPlayerId || undefined, studentId);
+      joinGame(code, playerName);
       setHasJoined(true);
     }
-  }, [code, connected, hasJoined, joinGame, joinedGameCodeRef, navigate, isStudentLoading, isStudentAuthenticated, student]);
+  }, [code, connected, hasJoined, joinGame, joinedGameCodeRef, navigate, isStudentLoading]);
 
   useEffect(() => {
     if (session && code) {
